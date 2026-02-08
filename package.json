@@ -2,16 +2,20 @@
   "name": "whstats",
   "version": "1.0.0",
   "description": "WH Stats - Compare booked hours (Redmine) vs clocked hours (timelogger)",
-  "author": "Armin Emmert",
+  "author": "Armin Emmert <emmertarmin@gmail.com>",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "whstats": "./index.ts"
+    "whstats": "./dist/index.js"
   },
   "files": [
-    "index.ts",
-    "lib/**/*.ts"
+    "dist/**/*.js",
+    "dist/**/*.d.ts"
   ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
   "keywords": [
     "redmine",
     "time-tracking",
@@ -27,14 +31,11 @@
   },
   "homepage": "https://github.com/emmertarmin/whstats#readme",
   "engines": {
-    "node": ">=18",
-    "bun": ">=1.0.0"
+    "node": ">=18"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/mssql": "^9.1.5"
-  },
-  "peerDependencies": {
+    "@types/mssql": "^9.1.5",
     "typescript": "^5"
   },
   "dependencies": {

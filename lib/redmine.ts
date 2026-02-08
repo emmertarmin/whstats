@@ -41,7 +41,7 @@ export async function fetchCurrentUser(config: Config): Promise<User> {
     throw new Error(`Redmine API error: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json();
+  const data = (await response.json()) as { user: User };
   return data.user;
 }
 
@@ -64,6 +64,6 @@ export async function fetchTimeEntries(
     throw new Error(`Redmine API error: ${response.status} ${response.statusText}`);
   }
 
-  const data: TimeEntriesResponse = await response.json();
+  const data = (await response.json()) as TimeEntriesResponse;
   return data.time_entries;
 }
