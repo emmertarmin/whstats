@@ -11,9 +11,7 @@ import {
 import { fetchCurrentUser, fetchTimeEntries, type TimeEntry } from "./lib/redmine.js";
 import { fetchClockedHours } from "./lib/mssql.js";
 import { getDateRange, formatHours, truncateComment, getDayName } from "./lib/utils.js";
-import packageJson from "./package.json" with { type: "json" };
-
-const VERSION = packageJson.version;
+import { VERSION } from "./lib/version.js";
 
 function showHelp(): void {
   console.log(`

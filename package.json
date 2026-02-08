@@ -13,6 +13,7 @@
     "dist/**/*.d.ts"
   ],
   "scripts": {
+    "prebuild": "bun -e \"import p from './package.json' with {type:'json'}; await Bun.write('lib/version.ts', 'export const VERSION = \\\"' + p.version + '\\\";\\n')\"",
     "build": "tsc",
     "prepublishOnly": "npm run build"
   },
@@ -39,6 +40,7 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "mssql": "^12.2.0"
+    "mssql": "^12.2.0",
+    "whstats": "^1.0.2"
   }
 }
