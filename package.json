@@ -1,6 +1,6 @@
 {
   "name": "whstats",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "WH Stats - Compare booked hours (Redmine) vs clocked hours (timelogger)",
   "author": "Armin Emmert <emmertarmin@gmail.com>",
   "license": "MIT",
