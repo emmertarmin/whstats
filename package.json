@@ -40,7 +40,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "mssql": "^12.2.0",
-    "whstats": "^1.0.2"
+    "mssql": "^12.2.0"
   }
 }

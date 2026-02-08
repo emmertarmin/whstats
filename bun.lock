@@ -6,7 +6,6 @@
       "name": "stats",
       "dependencies": {
         "mssql": "^12.2.0",
-        "whstats": "^1.0.2",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -169,8 +168,6 @@
     "undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
 
     "uuid": ["uuid@8.3.2", "", { "bin": { "uuid": "dist/bin/uuid" } }, "sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg=="],
-
-    "whstats": ["whstats@1.0.2", "", { "dependencies": { "mssql": "^12.2.0" }, "bin": { "whstats": "dist/index.js" } }, "sha512-6GUp5OScLpEXP2AwneVR6NaQpQFhSNs5AfN6dekb8mAeKbesD4EoVla9uIA0K66+xeS8eSH/AsL/Tw6OyPF3wg=="],
 
     "wsl-utils": ["wsl-utils@0.1.0", "", { "dependencies": { "is-wsl": "^3.1.0" } }, "sha512-h3Fbisa2nKGPxCpm89Hk33lBLsnaGBvctQopaBSOW/uIs6FTe1ATyAnKFJrzVs9vpGdsTe73WF3V4lIsk4Gacw=="],
   }
