@@ -163,32 +163,12 @@ export async function promptForConfig(existingConfig?: Config | null): Promise<C
 }
 
 export function getConfigOrExit(): Config {
-  // First try environment variables (for backwards compatibility / CI)
-  if (process.env.REDMINE_API_KEY && process.env.REDMINE_URL && 
-      process.env.MSSQL_SERVER && process.env.MSSQL_DATABASE &&
-      process.env.MSSQL_USER && process.env.MSSQL_PASSWORD &&
-      process.env.SLACK_USER_ID) {
-    return {
-      redmineApiKey: process.env.REDMINE_API_KEY,
-      redmineUrl: process.env.REDMINE_URL.replace(/\/$/, ""),
-      mssqlServer: process.env.MSSQL_SERVER,
-      mssqlDatabase: process.env.MSSQL_DATABASE,
-      mssqlUser: process.env.MSSQL_USER,
-      mssqlPassword: process.env.MSSQL_PASSWORD,
-      slackUserId: process.env.SLACK_USER_ID,
-    };
-  }
-
-  // Then try config file
   const config = loadConfig();
   if (config) {
     return config;
   }
 
-  // No config found
   console.error("\n  No configuration found.\n");
   console.error("  Run 'whstats --setup' to configure your credentials.\n");
-  console.error("  Or set environment variables: REDMINE_API_KEY, REDMINE_URL,");
-  console.error("  MSSQL_SERVER, MSSQL_DATABASE, MSSQL_USER, MSSQL_PASSWORD, SLACK_USER_ID\n");
   process.exit(1);
 }

@@ -29,12 +29,8 @@ function showHelp(): void {
     whstats --version    Show version
 
   Configuration:
+    Run 'whstats --setup' to configure your credentials interactively.
     Credentials are stored in: ~/.config/whstats/config.json
-    
-    Alternatively, set environment variables:
-      REDMINE_API_KEY, REDMINE_URL,
-      MSSQL_SERVER, MSSQL_DATABASE, MSSQL_USER, MSSQL_PASSWORD,
-      SLACK_USER_ID
 `);
 }
 

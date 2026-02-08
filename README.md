@@ -40,15 +40,6 @@ On first run, use `whstats --setup` to configure your credentials interactively.
 
 Configuration is stored in `~/.config/whstats/config.json`.
 
-Alternatively, you can set environment variables:
-- `REDMINE_API_KEY`
-- `REDMINE_URL`
-- `MSSQL_SERVER`
-- `MSSQL_DATABASE`
-- `MSSQL_USER`
-- `MSSQL_PASSWORD`
-- `SLACK_USER_ID`
-
 ## Example Output
 
 ```
