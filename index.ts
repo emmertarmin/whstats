@@ -17,11 +17,13 @@ const VERSION = "1.0.0";
 function showHelp(): void {
   console.log(`
   WH Stats v${VERSION}
-  
-  Compare booked hours (Redmine) vs clocked hours (timelogger) for the last 7 days.
+
+  Compare booked hours (Redmine) vs clocked hours (timelogger).
 
   Usage:
-    whstats              Show time statistics
+    whstats              Show time statistics for the last 7 days (default)
+    whstats --week       Show time statistics for the last 7 days (week)
+    whstats --month      Show time statistics for the last 30 days (month)
     whstats --setup      Configure credentials (interactive)
     whstats --config     Show config file location
     whstats --reset      Delete saved configuration
@@ -41,10 +43,10 @@ function showVersion(): void {
 function showConfig(): void {
   const configPath = getConfigPath();
   const exists = configExists();
-  
+
   console.log(`\n  Config file: ${configPath}`);
   console.log(`  Status: ${exists ? "configured" : "not configured"}\n`);
-  
+
   if (exists) {
     const config = loadConfig();
     if (config) {
@@ -94,7 +96,7 @@ function displayResults(entries: TimeEntry[], clockedHours: Map<string, number>)
   const sortedDates = Array.from(allDates).sort();
 
   if (sortedDates.length === 0) {
-    console.log("No time entries found for the last 7 days.");
+    console.log("No time entries found for the selected period.");
     return;
   }
 
@@ -114,18 +116,19 @@ function displayResults(entries: TimeEntry[], clockedHours: Map<string, number>)
       const comment = truncateComment(entry.comments || "(no comment)");
       console.log(`  - ${issueRef} ${hours} ${comment}`);
     }
+    console.log("");
   }
   console.log("");
 }
 
-async function runStats(): Promise<void> {
+async function runStats(days: number = 7): Promise<void> {
   const config = getConfigOrExit();
 
   try {
     const user = await fetchCurrentUser(config);
     console.log(`\nFetching time entries for ${user.firstname} ${user.lastname}...`);
 
-    const { from, to } = getDateRange(7);
+    const { from, to } = getDateRange(days);
 
     const [entries, clockedHours] = await Promise.all([
       fetchTimeEntries(config, user.id, from, to),
@@ -173,8 +176,18 @@ async function main(): Promise<void> {
       handleReset();
       break;
 
+    case "-w":
+    case "--week":
+      await runStats(7);
+      break;
+
+    case "-m":
+    case "--month":
+      await runStats(30);
+      break;
+
     case undefined:
-      await runStats();
+      await runStats(7);
       break;
 
     default:

@@ -50,10 +50,10 @@ export function deleteConfig(): boolean {
 }
 
 function prompt(rl: readline.Interface, question: string, defaultValue?: string): Promise<string> {
-  const displayQuestion = defaultValue 
+  const displayQuestion = defaultValue
     ? `${question} [${defaultValue}]: `
     : `${question}: `;
-  
+
   return new Promise((resolve) => {
     rl.question(displayQuestion, (answer) => {
       resolve(answer.trim() || defaultValue || "");
@@ -65,19 +65,19 @@ function promptPassword(rl: readline.Interface, question: string): Promise<strin
   return new Promise((resolve) => {
     const stdin = process.stdin;
     const stdout = process.stdout;
-    
+
     stdout.write(`${question}: `);
-    
+
     // Disable echo for password input
     if (stdin.isTTY) {
       stdin.setRawMode(true);
     }
-    
+
     let password = "";
-    
+
     const onData = (char: Buffer) => {
       const c = char.toString();
-      
+
       switch (c) {
         case "\n":
         case "\r":
@@ -106,7 +106,7 @@ function promptPassword(rl: readline.Interface, question: string): Promise<strin
           stdout.write("*");
       }
     };
-    
+
     stdin.resume();
     stdin.on("data", onData);
   });
@@ -123,13 +123,13 @@ export async function promptForConfig(existingConfig?: Config | null): Promise<C
 
   try {
     const config: Config = {
-      redmineUrl: await prompt(rl, "  Redmine URL", existingConfig?.redmineUrl),
+      redmineUrl: await prompt(rl, "  Redmine URL", existingConfig?.redmineUrl ?? "https://redmine.wirth-horn.de/"),
       redmineApiKey: await prompt(rl, "  Redmine API Key", existingConfig?.redmineApiKey),
-      mssqlServer: await prompt(rl, "  MSSQL Server", existingConfig?.mssqlServer),
-      mssqlDatabase: await prompt(rl, "  MSSQL Database", existingConfig?.mssqlDatabase),
+      mssqlServer: await prompt(rl, "  MSSQL Server", existingConfig?.mssqlServer ?? "10.10.10.15"),
+      mssqlDatabase: await prompt(rl, "  MSSQL Database", existingConfig?.mssqlDatabase ?? "wh_timelogger"),
       mssqlUser: await prompt(rl, "  MSSQL User", existingConfig?.mssqlUser),
       mssqlPassword: await prompt(rl, "  MSSQL Password", existingConfig?.mssqlPassword),
-      slackUserId: await prompt(rl, "  User ID (in timelogger)", existingConfig?.slackUserId),
+      slackUserId: await prompt(rl, "  User ID (in timelogger). Use /wh debug in Slack to find it.", existingConfig?.slackUserId),
     };
 
     rl.close();
@@ -154,7 +154,7 @@ export async function promptForConfig(existingConfig?: Config | null): Promise<C
 
     saveConfig(config);
     console.log(`\n  Config saved to ${CONFIG_FILE}\n`);
-    
+
     return config;
   } catch (error) {
     rl.close();
