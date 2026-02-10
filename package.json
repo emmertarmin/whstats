@@ -15,6 +15,7 @@
   "scripts": {
     "prebuild": "bun -e \"import p from './package.json' with {type:'json'}; await Bun.write('lib/version.ts', 'export const VERSION = \\\"' + p.version + '\\\";\\n')\"",
     "build": "tsc",
+    "tsc": "tsc --noEmit",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

@@ -14,6 +14,7 @@ export interface Config {
   mssqlUser: string;
   mssqlPassword: string;
   slackUserId: string;
+  targetHoursPerDay?: number;
 }
 
 export function getConfigPath(): string {
@@ -130,6 +131,7 @@ export async function promptForConfig(existingConfig?: Config | null): Promise<C
       mssqlUser: await prompt(rl, "  MSSQL User", existingConfig?.mssqlUser),
       mssqlPassword: await prompt(rl, "  MSSQL Password", existingConfig?.mssqlPassword),
       slackUserId: await prompt(rl, "  User ID (in timelogger). Use /wh debug in Slack to find it.", existingConfig?.slackUserId),
+      targetHoursPerDay: parseFloat(await prompt(rl, "  Target hours per day", existingConfig?.targetHoursPerDay?.toString() ?? "8")),
     };
 
     rl.close();
@@ -147,6 +149,12 @@ export async function promptForConfig(existingConfig?: Config | null): Promise<C
     if (missingFields.length > 0) {
       console.error(`\n  Error: Missing required fields: ${missingFields.join(", ")}`);
       process.exit(1);
+    }
+
+    // Validate target hours (must be positive number, default to 8 if invalid)
+    if (isNaN(config.targetHoursPerDay!) || config.targetHoursPerDay! <= 0) {
+      console.log("  Warning: Invalid target hours, using default of 8");
+      config.targetHoursPerDay = 8;
     }
 
     // Normalize URL

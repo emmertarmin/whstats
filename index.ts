@@ -20,15 +20,16 @@ function showHelp(): void {
   Compare booked hours (Redmine) vs clocked hours (timelogger).
 
   Usage:
-    whstats              Show time statistics for the last 7 days (default)
-    whstats --week       Show time statistics for the last 7 days (week)
-    whstats --month      Show time statistics for the last 30 days (month)
-    whstats --brief      Show concise output (daily totals only)
-    whstats --setup      Configure credentials (interactive)
-    whstats --config     Show config file location
-    whstats --reset      Delete saved configuration
-    whstats --help       Show this help message
-    whstats --version    Show version
+    whstats                 Show time statistics for the last 7 days (default)
+    whstats --week          Show time statistics for the last 7 days (week)
+    whstats --month         Show time statistics for the last 30 days (month)
+    whstats --brief         Show concise output (daily totals only)
+    whstats --no-summary    Show without aggregate summary (-n)
+    whstats --setup         Configure credentials (interactive)
+    whstats --config        Show config file location
+    whstats --reset         Delete saved configuration
+    whstats --help          Show this help message
+    whstats --version       Show version
 
   Configuration:
     Run 'whstats --setup' to configure your credentials interactively.
@@ -51,12 +52,13 @@ function showConfig(): void {
     const config = loadConfig();
     if (config) {
       console.log("  Current settings:");
-      console.log(`    Redmine URL:    ${config.redmineUrl}`);
-      console.log(`    Redmine API:    ${config.redmineApiKey.slice(0, 8)}...`);
-      console.log(`    MSSQL Server:   ${config.mssqlServer}`);
-      console.log(`    MSSQL Database: ${config.mssqlDatabase}`);
-      console.log(`    MSSQL User:     ${config.mssqlUser}`);
-      console.log(`    User ID:        ${config.slackUserId}\n`);
+      console.log(`    Redmine URL:       ${config.redmineUrl}`);
+      console.log(`    Redmine API:       ${config.redmineApiKey.slice(0, 8)}...`);
+      console.log(`    MSSQL Server:      ${config.mssqlServer}`);
+      console.log(`    MSSQL Database:    ${config.mssqlDatabase}`);
+      console.log(`    MSSQL User:        ${config.mssqlUser}`);
+      console.log(`    User ID:           ${config.slackUserId}`);
+      console.log(`    Target hours/day:  ${config.targetHoursPerDay ?? 8}\n`);
     }
   }
 }
@@ -88,7 +90,13 @@ function groupByDate(entries: TimeEntry[]): Map<string, TimeEntry[]> {
   return grouped;
 }
 
-function displayResults(entries: TimeEntry[], clockedHours: Map<string, number>, brief = false): void {
+function displayResults(
+  entries: TimeEntry[],
+  clockedHours: Map<string, number>,
+  brief = false,
+  showAggregates = true,
+  targetHoursPerDay = 8
+): void {
   const grouped = groupByDate(entries);
 
   // Combine all dates from both sources
@@ -100,12 +108,19 @@ function displayResults(entries: TimeEntry[], clockedHours: Map<string, number>,
     return;
   }
 
+  // Calculate totals for aggregates
+  let totalBooked = 0;
+  let totalClocked = 0;
+
   console.log("");
   for (const date of sortedDates) {
     const dayEntries = grouped.get(date) || [];
     const bookedHours = dayEntries.reduce((sum, e) => sum + e.hours, 0);
     const clocked = clockedHours.get(date) || 0;
     const dayName = getDayName(date);
+
+    totalBooked += bookedHours;
+    totalClocked += clocked;
 
     const clockedStr = clocked > 0 ? formatHours(clocked) : "-";
     console.log(`${date} ${dayName}: ${formatHours(bookedHours)} booked / ${clockedStr} clocked`);
@@ -123,9 +138,31 @@ function displayResults(entries: TimeEntry[], clockedHours: Map<string, number>,
   if (!brief) {
     console.log("");
   }
+
+  // Display aggregates if enabled
+  if (showAggregates) {
+    const workdays = sortedDates.length;
+    const targetTotal = targetHoursPerDay * workdays;
+    const bookedDiscrepancy = totalBooked - targetTotal;
+    const clockedDiscrepancy = totalClocked - targetTotal;
+    const bookedPct = targetTotal > 0 ? Math.round((totalBooked / targetTotal) * 100) : 0;
+    const clockedPct = targetTotal > 0 ? Math.round((totalClocked / targetTotal) * 100) : 0;
+    const efficiency = totalClocked > 0 ? Math.round((totalBooked / totalClocked) * 100) : 0;
+
+    console.log(`  ─────────────────────────────`);
+    console.log(`  Summary: ${workdays} days @ ${formatHours(targetHoursPerDay)}/day = ${formatHours(targetTotal)} target`);
+
+    const bookedSign = bookedDiscrepancy > 0 ? "+" : "";
+    const clockedSign = clockedDiscrepancy > 0 ? "+" : "";
+
+    console.log(`    Booked:  ${formatHours(totalBooked)} = ${bookedPct}% (${bookedSign}${formatHours(bookedDiscrepancy)})`);
+    console.log(`    Clocked: ${formatHours(totalClocked)} = ${clockedPct}% (${clockedSign}${formatHours(clockedDiscrepancy)})`);
+    console.log(`    Efficiency: ${efficiency}% (booked/clocked ratio)`);
+    console.log("");
+  }
 }
 
-async function runStats(days: number = 7, brief = false): Promise<void> {
+async function runStats(days: number = 7, brief = false, showAggregates = true): Promise<void> {
   const config = getConfigOrExit();
 
   try {
@@ -141,7 +178,8 @@ async function runStats(days: number = 7, brief = false): Promise<void> {
       fetchClockedHours(config, from, to),
     ]);
 
-    displayResults(entries, clockedHours, brief);
+    const targetHours = config.targetHoursPerDay ?? 8;
+    displayResults(entries, clockedHours, brief, showAggregates, targetHours);
   } catch (error) {
     if (error instanceof Error) {
       console.error(`\n  Error: ${error.message}\n`);
@@ -152,13 +190,40 @@ async function runStats(days: number = 7, brief = false): Promise<void> {
   }
 }
 
+const COMMAND_FLAGS = new Set([
+  "--help", "-h",
+  "--version", "-v",
+  "--setup", "-s",
+  "--config", "-c",
+  "--reset", "-r",
+  "--week", "-w",
+  "--month", "-m",
+]);
+
+const MODIFIER_FLAGS = new Set(["--brief", "-b", "--no-summary", "-n"]);
+
 async function main(): Promise<void> {
   // Filter out script name (e.g., "index.ts") when running with bun
   const args = process.argv.slice(2).filter((arg) => !arg.endsWith(".ts") && !arg.endsWith(".js"));
   const brief = args.includes("--brief") || args.includes("-b");
-  // Get first non-flag argument, or if all are flags, undefined (default to stats)
+  const showAggregates = !args.includes("--no-summary") && !args.includes("-n");
+
+  // Check for unknown flags
+  const unknownFlag = args.find((arg) =>
+    arg.startsWith("-") &&
+    !COMMAND_FLAGS.has(arg) &&
+    !MODIFIER_FLAGS.has(arg)
+  );
+  if (unknownFlag) {
+    console.error(`\n  Unknown flag: ${unknownFlag}`);
+    console.error("  Run 'whstats --help' for usage.\n");
+    process.exit(1);
+  }
+
+  // Command is either a known command flag or a non-flag argument
+  const flagCommand = args.find((arg) => COMMAND_FLAGS.has(arg));
   const nonFlagArg = args.find((arg) => !arg.startsWith("-"));
-  const command = nonFlagArg;
+  const command = flagCommand ?? nonFlagArg;
 
   switch (command) {
     case "--help":
@@ -188,16 +253,16 @@ async function main(): Promise<void> {
 
     case "-w":
     case "--week":
-      await runStats(7, brief);
+      await runStats(7, brief, showAggregates);
       break;
 
     case "-m":
     case "--month":
-      await runStats(30, brief);
+      await runStats(30, brief, showAggregates);
       break;
 
     case undefined:
-      await runStats(7, brief);
+      await runStats(7, brief, showAggregates);
       break;
 
     default:
