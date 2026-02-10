@@ -19,6 +19,6 @@ export function truncateComment(comment: string, maxLength: number = 30): string
 }
 
 export function getDayName(dateStr: string): string {
-  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   return days[new Date(dateStr).getDay()]!;
 }
