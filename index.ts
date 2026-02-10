@@ -23,6 +23,7 @@ function showHelp(): void {
     whstats              Show time statistics for the last 7 days (default)
     whstats --week       Show time statistics for the last 7 days (week)
     whstats --month      Show time statistics for the last 30 days (month)
+    whstats --brief      Show concise output (daily totals only)
     whstats --setup      Configure credentials (interactive)
     whstats --config     Show config file location
     whstats --reset      Delete saved configuration
@@ -87,7 +88,7 @@ function groupByDate(entries: TimeEntry[]): Map<string, TimeEntry[]> {
   return grouped;
 }
 
-function displayResults(entries: TimeEntry[], clockedHours: Map<string, number>): void {
+function displayResults(entries: TimeEntry[], clockedHours: Map<string, number>, brief = false): void {
   const grouped = groupByDate(entries);
 
   // Combine all dates from both sources
@@ -109,23 +110,29 @@ function displayResults(entries: TimeEntry[], clockedHours: Map<string, number>)
     const clockedStr = clocked > 0 ? formatHours(clocked) : "-";
     console.log(`${date} ${dayName}: ${formatHours(bookedHours)} booked / ${clockedStr} clocked`);
 
-    for (const entry of dayEntries) {
-      const issueRef = entry.issue ? `#${entry.issue.id}` : "#N/A";
-      const hours = formatHours(entry.hours);
-      const comment = truncateComment(entry.comments || "(no comment)");
-      console.log(`  - ${issueRef} ${hours} ${comment}`);
+    if (!brief) {
+      for (const entry of dayEntries) {
+        const issueRef = entry.issue ? `#${entry.issue.id}` : "#N/A";
+        const hours = formatHours(entry.hours);
+        const comment = truncateComment(entry.comments || "(no comment)");
+        console.log(`  - ${issueRef} ${hours} ${comment}`);
+      }
+      console.log("");
     }
+  }
+  if (!brief) {
     console.log("");
   }
-  console.log("");
 }
 
-async function runStats(days: number = 7): Promise<void> {
+async function runStats(days: number = 7, brief = false): Promise<void> {
   const config = getConfigOrExit();
 
   try {
     const user = await fetchCurrentUser(config);
-    console.log(`\nFetching time entries for ${user.firstname} ${user.lastname}...`);
+    if (!brief) {
+      console.log(`\nFetching time entries for ${user.firstname} ${user.lastname}...`);
+    }
 
     const { from, to } = getDateRange(days);
 
@@ -134,7 +141,7 @@ async function runStats(days: number = 7): Promise<void> {
       fetchClockedHours(config, from, to),
     ]);
 
-    displayResults(entries, clockedHours);
+    displayResults(entries, clockedHours, brief);
   } catch (error) {
     if (error instanceof Error) {
       console.error(`\n  Error: ${error.message}\n`);
@@ -146,8 +153,12 @@ async function runStats(days: number = 7): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const command = args[0];
+  // Filter out script name (e.g., "index.ts") when running with bun
+  const args = process.argv.slice(2).filter((arg) => !arg.endsWith(".ts") && !arg.endsWith(".js"));
+  const brief = args.includes("--brief") || args.includes("-b");
+  // Get first non-flag argument, or if all are flags, undefined (default to stats)
+  const nonFlagArg = args.find((arg) => !arg.startsWith("-"));
+  const command = nonFlagArg;
 
   switch (command) {
     case "--help":
@@ -177,16 +188,16 @@ async function main(): Promise<void> {
 
     case "-w":
     case "--week":
-      await runStats(7);
+      await runStats(7, brief);
       break;
 
     case "-m":
     case "--month":
-      await runStats(30);
+      await runStats(30, brief);
       break;
 
     case undefined:
-      await runStats(7);
+      await runStats(7, brief);
       break;
 
     default:
