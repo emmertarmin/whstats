@@ -10,7 +10,7 @@ import {
 } from "./lib/config.js";
 import { fetchCurrentUser, fetchTimeEntries, type TimeEntry } from "./lib/redmine.js";
 import { fetchClockedHours } from "./lib/mssql.js";
-import { getDateRange, formatHours, truncateComment, getDayName } from "./lib/utils.js";
+import { getDateRange, formatHours, truncateComment, getDayName, truncateProject } from "./lib/utils.js";
 import { VERSION } from "./lib/version.js";
 
 function showHelp(): void {
@@ -132,15 +132,13 @@ function displayResults(
     if (!brief) {
       for (const entry of dayEntries) {
         const issueRef = entry.issue ? `#${entry.issue.id}` : "#N/A";
-        const hours = formatHours(entry.hours);
+        const project = truncateProject(entry.project?.name || "N/A");
+        const hours = formatHours(entry.hours).padStart(5, " ");
         const comment = truncateComment(entry.comments || "(no comment)");
-        console.log(`  - ${issueRef} ${hours} ${comment}`);
+        console.log(`  - ${hours} ${project} ${issueRef} ${comment}`);
       }
       console.log("");
     }
-  }
-  if (!brief) {
-    console.log("");
   }
 
   // Display aggregates if enabled
@@ -153,8 +151,8 @@ function displayResults(
     const clockedPct = targetTotal > 0 ? Math.round((totalClocked / targetTotal) * 100) : 0;
     const efficiency = totalClocked > 0 ? Math.round((totalBooked / totalClocked) * 100) : 0;
 
-    console.log(`  ─────────────────────────────`);
-    console.log(`  Summary: ${workdays} days @ ${formatHours(targetHoursPerDay)}/day = ${formatHours(targetTotal)} target`);
+    console.log(`─────────────────────────────`);
+    console.log(`Summary: ${workdays} days @ ${formatHours(targetHoursPerDay)}/day = ${formatHours(targetTotal)} target`);
 
     const bookedSign = bookedDiscrepancy > 0 ? "+" : "";
     const clockedSign = clockedDiscrepancy > 0 ? "+" : "";

@@ -13,9 +13,15 @@ export function formatHours(hours: number): string {
   return hours % 1 === 0 ? `${hours}h` : `${hours.toFixed(2)}h`;
 }
 
-export function truncateComment(comment: string, maxLength: number = 30): string {
+export function truncateComment(comment: string, maxLength: number = 50): string {
   if (comment.length <= maxLength) return comment;
   return comment.substring(0, maxLength - 3) + "...";
+}
+
+export function truncateProject(name: string, maxLength: number = 5): string {
+  name = name.replace(/[\s\.\-#&]/g, "");
+  if (name.length <= maxLength) return name.padEnd(maxLength, " ");
+  return name.substring(0, maxLength);
 }
 
 export function getDayName(dateStr: string): string {
