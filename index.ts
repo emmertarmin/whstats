@@ -20,6 +20,10 @@ function showHelp(): void {
   Compare booked hours (Redmine) vs clocked hours (timelogger).
 
   Usage:
+    A) Run "npx whstats" to execute without installing globally.
+    B) Alternatively, install with 'npm install -g whstats' and run 'whstats'.
+       Update with 'npm update -g whstats --latest'.
+
     whstats                 Show time statistics for the last 7 days (default)
     whstats --week          Show time statistics for the last 7 days (week)
     whstats --month         Show time statistics for the last 30 days (month)
