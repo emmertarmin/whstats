@@ -8,6 +8,26 @@ export interface ClockedHoursResult {
   isClockRunningToday: boolean;
 }
 
+function getDayEndUtc(dateStr: string): Date {
+  return new Date(`${dateStr}T23:59:59.999Z`);
+}
+
+function addHoursForInterval(
+  hoursByDate: Map<string, number>,
+  day: string,
+  start: Date,
+  end: Date
+): void {
+  const durationMs = end.getTime() - start.getTime();
+  if (durationMs <= 0) {
+    return;
+  }
+
+  const durationHours = durationMs / (1000 * 60 * 60);
+  const existing = hoursByDate.get(day) ?? 0;
+  hoursByDate.set(day, existing + durationHours);
+}
+
 export async function fetchClockedHours(
   config: Config,
   from: string,
@@ -27,48 +47,61 @@ export async function fetchClockedHours(
   const pool = await sql.connect(sqlConfig);
 
   try {
-    // Query to calculate clocked-in time per day
-    // For each day, we pair clock-in (1) with clock-out (0) events and sum the differences
+    // Query raw events and aggregate in TypeScript using explicit state transitions.
+    // This avoids overcounting when redundant start/stop events are emitted.
     const result = await pool.request()
       .input("userId", sql.Int, parseInt(config.slackUserId))
       .input("fromDate", sql.Date, from)
       .input("toDate", sql.Date, to)
       .query(`
-        WITH OrderedEvents AS (
-          SELECT 
-            CAST([date] AS DATE) AS day,
-            [date] AS event_time,
-            [clock],
-            ROW_NUMBER() OVER (PARTITION BY CAST([date] AS DATE) ORDER BY [date]) AS rn
-          FROM event_logs
-          WHERE user_id = @userId
-            AND CAST([date] AS DATE) >= @fromDate
-            AND CAST([date] AS DATE) <= @toDate
-        ),
-        ClockPairs AS (
-          SELECT 
-            e1.day,
-            e1.event_time AS clock_in,
-            e2.event_time AS clock_out
-          FROM OrderedEvents e1
-          LEFT JOIN OrderedEvents e2 
-            ON e1.day = e2.day 
-            AND e1.rn + 1 = e2.rn 
-            AND e2.clock = 0
-          WHERE e1.clock = 1
-        )
-        SELECT 
-          day,
-          SUM(DATEDIFF(MINUTE, clock_in, ISNULL(clock_out, GETDATE()))) / 60.0 AS hours
-        FROM ClockPairs
-        GROUP BY day
-        ORDER BY day
+        SELECT
+          [date] AS event_time,
+          [clock]
+        FROM event_logs
+        WHERE user_id = @userId
+          AND CAST([date] AS DATE) >= @fromDate
+          AND CAST([date] AS DATE) <= @toDate
+        ORDER BY [date] ASC
       `);
 
     const clockedHours = new Map<string, number>();
-    for (const row of result.recordset) {
-      const dateStr = formatDate(new Date(row.day));
-      clockedHours.set(dateStr, parseFloat(row.hours));
+    const now = new Date();
+    const today = formatDate(now);
+
+    let activeStart: Date | null = null;
+    let activeDay: string | null = null;
+
+    for (const row of result.recordset as Array<{ event_time: Date; clock: number }>) {
+      const eventTime = new Date(row.event_time);
+      const eventDay = formatDate(eventTime);
+      const isClockIn = Number(row.clock) === 1;
+
+      if (activeStart && activeDay && activeDay !== eventDay) {
+        addHoursForInterval(clockedHours, activeDay, activeStart, getDayEndUtc(activeDay));
+        activeStart = null;
+        activeDay = null;
+      }
+
+      if (isClockIn) {
+        if (!activeStart) {
+          activeStart = eventTime;
+          activeDay = eventDay;
+        }
+        continue;
+      }
+
+      if (activeStart && activeDay) {
+        addHoursForInterval(clockedHours, activeDay, activeStart, eventTime);
+        activeStart = null;
+        activeDay = null;
+      }
+    }
+
+    const isClockRunningToday = activeStart !== null && activeDay === today;
+
+    if (activeStart && activeDay) {
+      const closingTime = isClockRunningToday ? now : getDayEndUtc(activeDay);
+      addHoursForInterval(clockedHours, activeDay, activeStart, closingTime);
     }
 
     const statusResult = await pool.request()
@@ -101,7 +134,7 @@ export async function fetchClockedHours(
     return {
       hoursByDate: clockedHours,
       today: statusRow ? formatDate(new Date(statusRow.today)) : formatDate(new Date()),
-      isClockRunningToday: Boolean(statusRow?.is_running),
+      isClockRunningToday: isClockRunningToday || Boolean(statusRow?.is_running),
     };
   } finally {
     await pool.close();
