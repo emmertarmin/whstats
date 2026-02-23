@@ -11,6 +11,7 @@ import {
 import { fetchCurrentUser, fetchTimeEntries, type TimeEntry } from "./lib/redmine.js";
 import { fetchClockedHours } from "./lib/mssql.js";
 import { getDateRange, formatHours, truncateComment, getDayName, truncateProject } from "./lib/utils.js";
+import { colors as c } from "./lib/colors.js";
 import { VERSION } from "./lib/version.js";
 
 function showHelp(): void {
@@ -42,27 +43,27 @@ function showHelp(): void {
 }
 
 function showVersion(): void {
-  console.log(`whstats v${VERSION}`);
+  console.log(c.line(`whstats v${VERSION}`));
 }
 
 function showConfig(): void {
   const configPath = getConfigPath();
   const exists = configExists();
 
-  console.log(`\n  Config file: ${configPath}`);
-  console.log(`  Status: ${exists ? "configured" : "not configured"}\n`);
+  console.log(c.line(`\n  Config file: ${configPath}`));
+  console.log(c.line(`  Status: ${exists ? c.success("configured") : c.warning("not configured")}\n`));
 
   if (exists) {
     const config = loadConfig();
     if (config) {
-      console.log("  Current settings:");
-      console.log(`    Redmine URL:       ${config.redmineUrl}`);
-      console.log(`    Redmine API:       ${config.redmineApiKey.slice(0, 8)}...`);
-      console.log(`    MSSQL Server:      ${config.mssqlServer}`);
-      console.log(`    MSSQL Database:    ${config.mssqlDatabase}`);
-      console.log(`    MSSQL User:        ${config.mssqlUser}`);
-      console.log(`    User ID:           ${config.slackUserId}`);
-      console.log(`    Target hours/day:  ${config.targetHoursPerDay ?? 8}\n`);
+      console.log(c.line("  Current settings:"));
+      console.log(c.line(`    Redmine URL:       ${c.highlight(config.redmineUrl)}`));
+      console.log(c.line(`    Redmine API:       ${c.highlight(config.redmineApiKey.slice(0, 8))}...`));
+      console.log(c.line(`    MSSQL Server:      ${c.highlight(config.mssqlServer)}`));
+      console.log(c.line(`    MSSQL Database:    ${c.highlight(config.mssqlDatabase)}`));
+      console.log(c.line(`    MSSQL User:        ${c.highlight(config.mssqlUser)}`));
+      console.log(c.line(`    User ID:           ${c.highlight(config.slackUserId)}`));
+      console.log(c.line(`    Target hours/day:  ${c.highlight(`${config.targetHoursPerDay ?? 8}h`)}\n`));
     }
   }
 }
@@ -74,9 +75,9 @@ async function handleSetup(): Promise<void> {
 
 function handleReset(): void {
   if (deleteConfig()) {
-    console.log("\n  Configuration deleted.\n");
+    console.log(c.line(`\n  ${c.success("Configuration deleted.")}\n`));
   } else {
-    console.log("\n  No configuration file found.\n");
+    console.log(c.line(`\n  ${c.warning("No configuration file found.")}\n`));
   }
 }
 
@@ -94,9 +95,22 @@ function groupByDate(entries: TimeEntry[]): Map<string, TimeEntry[]> {
   return grouped;
 }
 
+function colorizePercentage(value: number, label?: string): string {
+  const text = label ?? `${value}%`;
+  if (value > 95) {
+    return c.success(text);
+  }
+  if (value >= 90) {
+    return c.warning(text);
+  }
+  return c.danger(text);
+}
+
 function displayResults(
   entries: TimeEntry[],
   clockedHours: Map<string, number>,
+  currentDate: string,
+  isCurrentDayClockRunning: boolean,
   brief = false,
   showAggregates = true,
   targetHoursPerDay = 8
@@ -108,7 +122,7 @@ function displayResults(
   const sortedDates = Array.from(allDates).sort();
 
   if (sortedDates.length === 0) {
-    console.log("No time entries found for the selected period.");
+    console.log(c.line(c.warning("No time entries found for the selected period.")));
     return;
   }
 
@@ -127,7 +141,11 @@ function displayResults(
     totalClocked += clocked;
 
     const clockedStr = clocked > 0 ? formatHours(clocked) : "-";
-    console.log(`${date} ${dayName}: ${formatHours(bookedHours)} booked / ${clockedStr} clocked`);
+    console.log(
+      c.line(
+        `${c.info(date)} ${c.dim(`[${dayName}]`)}: ${c.highlight(formatHours(bookedHours))} booked / ${clocked > 0 ? c.highlight(clockedStr) : clockedStr} clocked`
+      )
+    );
 
     if (!brief) {
       for (const entry of dayEntries) {
@@ -135,7 +153,7 @@ function displayResults(
         const project = truncateProject(entry.project?.name || "N/A");
         const hours = formatHours(entry.hours).padStart(5, " ");
         const comment = truncateComment(entry.comments || "(no comment)");
-        console.log(`  - ${hours} ${project} ${issueRef} ${comment}`);
+        console.log(c.line(`    ${c.highlight(hours)} ${c.warning(project)} ${c.danger(issueRef)} ${c.dim(comment)}`));
       }
       console.log("");
     }
@@ -144,22 +162,105 @@ function displayResults(
   // Display aggregates if enabled
   if (showAggregates) {
     const workdays = sortedDates.length;
-    const targetTotal = targetHoursPerDay * workdays;
+    let targetTotal = 0;
+    let hasAdjustedCurrentDayTarget = false;
+    let adjustedCurrentDayTarget = 0;
+    const hasCurrentDateInRange = sortedDates.includes(currentDate);
+    const bookedToday = hasCurrentDateInRange ? grouped.get(currentDate)?.reduce((sum, e) => sum + e.hours, 0) ?? 0 : 0;
+    const bookedPastDays = totalBooked - bookedToday;
+
+    for (const date of sortedDates) {
+      let dayTarget = targetHoursPerDay;
+      if (isCurrentDayClockRunning && date === currentDate) {
+        const clockedToday = clockedHours.get(date) || 0;
+        dayTarget = Math.min(clockedToday, targetHoursPerDay);
+        hasAdjustedCurrentDayTarget = dayTarget !== targetHoursPerDay;
+        adjustedCurrentDayTarget = dayTarget;
+      }
+      targetTotal += dayTarget;
+    }
+
     const bookedDiscrepancy = totalBooked - targetTotal;
     const clockedDiscrepancy = totalClocked - targetTotal;
     const bookedPct = targetTotal > 0 ? Math.round((totalBooked / targetTotal) * 100) : 0;
     const clockedPct = targetTotal > 0 ? Math.round((totalClocked / targetTotal) * 100) : 0;
     const efficiency = totalClocked > 0 ? Math.round((totalBooked / totalClocked) * 100) : 0;
 
-    console.log(`─────────────────────────────`);
-    console.log(`Summary: ${workdays} days @ ${formatHours(targetHoursPerDay)}/day = ${formatHours(targetTotal)} target`);
+    const pastDaysTarget = targetTotal - adjustedCurrentDayTarget;
+    const summary = `Summary (${workdays} days)`;
 
     const bookedSign = bookedDiscrepancy > 0 ? "+" : "";
     const clockedSign = clockedDiscrepancy > 0 ? "+" : "";
 
-    console.log(`    Booked:  ${formatHours(totalBooked)} = ${bookedPct}% (${bookedSign}${formatHours(bookedDiscrepancy)})`);
-    console.log(`    Clocked: ${formatHours(totalClocked)} = ${clockedPct}% (${clockedSign}${formatHours(clockedDiscrepancy)})`);
-    console.log(`    Efficiency: ${efficiency}% (booked/clocked ratio)`);
+    if (hasAdjustedCurrentDayTarget) {
+      const clockedToday = hasCurrentDateInRange ? clockedHours.get(currentDate) || 0 : 0;
+      const clockedPastDays = totalClocked - clockedToday;
+
+      const splitRows = [
+        {
+          prefix: "    Target:",
+          past: formatHours(pastDaysTarget),
+          today: formatHours(adjustedCurrentDayTarget),
+          pctValue: undefined as number | undefined,
+          discrepancy: "",
+          tail: "target",
+        },
+        {
+          prefix: "    Booked:",
+          past: formatHours(bookedPastDays),
+          today: formatHours(bookedToday),
+          pctValue: bookedPct,
+          discrepancy: `(${bookedSign}${formatHours(bookedDiscrepancy)})`,
+          tail: "",
+        },
+        {
+          prefix: "    Clocked:",
+          past: formatHours(clockedPastDays),
+          today: formatHours(clockedToday),
+          pctValue: clockedPct,
+          discrepancy: `(${clockedSign}${formatHours(clockedDiscrepancy)})`,
+          tail: "",
+        },
+      ];
+
+      const pctLabels = splitRows.map((row) => (row.pctValue === undefined ? "" : `${row.pctValue}%`));
+
+      const prefixWidth = Math.max(...splitRows.map((row) => row.prefix.length));
+      const pastWidth = Math.max(...splitRows.map((row) => row.past.length));
+      const todayWidth = Math.max(...splitRows.map((row) => row.today.length));
+      const pctWidth = Math.max(...pctLabels.map((label) => label.length));
+      const discrepancyWidth = Math.max(...splitRows.map((row) => row.discrepancy.length));
+
+      const rowLines = splitRows.map((row, index) => {
+        const pctLabel = pctLabels[index]!;
+        const paddedPct = pctLabel.padStart(pctWidth, " ");
+        const coloredPct = row.pctValue === undefined ? "" : colorizePercentage(row.pctValue, paddedPct);
+        const base = `${row.prefix.padEnd(prefixWidth, " ")} ${row.past.padStart(pastWidth, " ")} + ${row.today.padStart(todayWidth, " ")}`;
+        if (pctLabel.length === 0 && row.discrepancy.length === 0) {
+          return `${row.prefix.padEnd(prefixWidth, " ")} ${c.highlight(row.past.padStart(pastWidth, " "))} + ${c.highlight(row.today.padStart(todayWidth, " "))} ${row.tail}`;
+        }
+        return `${row.prefix.padEnd(prefixWidth, " ")} ${c.highlight(row.past.padStart(pastWidth, " "))} + ${c.highlight(row.today.padStart(todayWidth, " "))} = ${coloredPct} ${c.dim(row.discrepancy.padStart(discrepancyWidth, " "))}`;
+      });
+
+      const separatorWidth = Math.max(summary.length, ...rowLines.map((line) => line.length));
+      console.log(c.line("─".repeat(separatorWidth)));
+      console.log(c.line(`Summary ${c.dim(`(${workdays} days)`)}`));
+
+      for (const line of rowLines) {
+        console.log(c.line(line));
+      }
+    } else {
+      const targetLine = `    Target:  ${c.highlight(formatHours(targetHoursPerDay))}/day = ${c.highlight(formatHours(targetTotal))} target`;
+      const bookedLine = `    Booked:  ${c.highlight(formatHours(totalBooked))} = ${colorizePercentage(bookedPct)} ${c.dim(`(${bookedSign}${formatHours(bookedDiscrepancy)})`)}`;
+      const clockedLine = `    Clocked: ${c.highlight(formatHours(totalClocked))} = ${colorizePercentage(clockedPct)} ${c.dim(`(${clockedSign}${formatHours(clockedDiscrepancy)})`)}`;
+      const separatorWidth = Math.max(summary.length, targetLine.length, bookedLine.length, clockedLine.length);
+      console.log(c.line("─".repeat(separatorWidth)));
+      console.log(c.line(`Summary ${c.dim(`(${workdays} days)`)}`));
+      console.log(c.line(targetLine));
+      console.log(c.line(bookedLine));
+      console.log(c.line(clockedLine));
+    }
+    console.log(c.line(`    Efficiency: ${colorizePercentage(efficiency)} ${c.dim("(booked/clocked ratio)")}`));
     console.log("");
   }
 }
@@ -170,23 +271,31 @@ async function runStats(days: number = 7, brief = false, showAggregates = true):
   try {
     const user = await fetchCurrentUser(config);
     if (!brief) {
-      console.log(`\nFetching time entries for ${user.firstname} ${user.lastname}...`);
+      console.log(c.line(`\n${c.info(`Fetching time entries for ${user.firstname} ${user.lastname}...`)}`));
     }
 
     const { from, to } = getDateRange(days);
 
-    const [entries, clockedHours] = await Promise.all([
+    const [entries, clockedData] = await Promise.all([
       fetchTimeEntries(config, user.id, from, to),
       fetchClockedHours(config, from, to),
     ]);
 
     const targetHours = config.targetHoursPerDay ?? 8;
-    displayResults(entries, clockedHours, brief, showAggregates, targetHours);
+    displayResults(
+      entries,
+      clockedData.hoursByDate,
+      clockedData.today,
+      clockedData.isClockRunningToday,
+      brief,
+      showAggregates,
+      targetHours,
+    );
   } catch (error) {
     if (error instanceof Error) {
-      console.error(`\n  Error: ${error.message}\n`);
+      console.error(c.line(`\n  ${c.danger(`Error: ${error.message}`)}\n`));
     } else {
-      console.error("\n  An unexpected error occurred.\n");
+      console.error(c.line(`\n  ${c.danger("An unexpected error occurred.")}\n`));
     }
     process.exit(1);
   }
@@ -217,8 +326,8 @@ async function main(): Promise<void> {
     !MODIFIER_FLAGS.has(arg)
   );
   if (unknownFlag) {
-    console.error(`\n  Unknown flag: ${unknownFlag}`);
-    console.error("  Run 'whstats --help' for usage.\n");
+    console.error(c.line(`\n  ${c.warning(`Unknown flag: ${unknownFlag}`)}`));
+    console.error(c.line(`  ${c.dim("Run 'whstats --help' for usage.")}\n`));
     process.exit(1);
   }
 
@@ -268,8 +377,8 @@ async function main(): Promise<void> {
       break;
 
     default:
-      console.error(`\n  Unknown command: ${command}`);
-      console.error("  Run 'whstats --help' for usage.\n");
+      console.error(c.line(`\n  ${c.warning(`Unknown command: ${command}`)}`));
+      console.error(c.line(`  ${c.dim("Run 'whstats --help' for usage.")}\n`));
       process.exit(1);
   }
 }
