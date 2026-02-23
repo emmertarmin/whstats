@@ -41,6 +41,7 @@ export async function fetchClockedHours(
     options: {
       encrypt: false,
       trustServerCertificate: true,
+      useUTC: false,
     },
   };
 
@@ -71,7 +72,8 @@ export async function fetchClockedHours(
     let activeStart: Date | null = null;
     let activeDay: string | null = null;
 
-    for (const row of result.recordset as Array<{ event_time: Date; clock: number }>) {
+    const rows = result.recordset as Array<{ event_time: Date; clock: number }>;
+    for (const row of rows) {
       const eventTime = new Date(row.event_time);
       const eventDay = formatDate(eventTime);
       const isClockIn = Number(row.clock) === 1;
