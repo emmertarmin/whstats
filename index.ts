@@ -11,7 +11,7 @@ import {
 import { fetchCurrentUser, fetchTimeEntries, type TimeEntry } from "./lib/redmine.js";
 import { fetchClockedHours } from "./lib/mssql.js";
 import { getDateRange, formatHours, truncateComment, getDayName, truncateProject } from "./lib/utils.js";
-import { colors as c } from "./lib/colors.js";
+import { colors as c, stripAnsi } from "./lib/colors.js";
 import { VERSION } from "./lib/version.js";
 
 function helpLine(flag: string, desc: string): string {
@@ -189,6 +189,7 @@ function displayResults(
     const bookedPct = targetTotal > 0 ? Math.round((totalBooked / targetTotal) * 100) : 0;
     const clockedPct = targetTotal > 0 ? Math.round((totalClocked / targetTotal) * 100) : 0;
     const efficiency = totalClocked > 0 ? Math.round((totalBooked / totalClocked) * 100) : 0;
+    const efficiencyLine = `    Efficiency: ${colorizePercentage(efficiency)} ${c.dim("(booked/clocked ratio)")}`;
 
     const pastDaysTarget = targetTotal - adjustedCurrentDayTarget;
     const summary = `Summary (${workdays} days)`;
@@ -239,14 +240,17 @@ function displayResults(
         const pctLabel = pctLabels[index]!;
         const paddedPct = pctLabel.padStart(pctWidth, " ");
         const coloredPct = row.pctValue === undefined ? "" : colorizePercentage(row.pctValue, paddedPct);
-        const base = `${row.prefix.padEnd(prefixWidth, " ")} ${row.past.padStart(pastWidth, " ")} + ${row.today.padStart(todayWidth, " ")}`;
         if (pctLabel.length === 0 && row.discrepancy.length === 0) {
           return `${row.prefix.padEnd(prefixWidth, " ")} ${c.highlight(row.past.padStart(pastWidth, " "))} + ${c.highlight(row.today.padStart(todayWidth, " "))} ${row.tail}`;
         }
         return `${row.prefix.padEnd(prefixWidth, " ")} ${c.highlight(row.past.padStart(pastWidth, " "))} + ${c.highlight(row.today.padStart(todayWidth, " "))} = ${coloredPct} ${c.dim(row.discrepancy.padStart(discrepancyWidth, " "))}`;
       });
 
-      const separatorWidth = Math.max(summary.length, ...rowLines.map((line) => line.length));
+      const separatorWidth = Math.max(
+        summary.length,
+        stripAnsi(efficiencyLine).length,
+        ...rowLines.map((line) => stripAnsi(line).length),
+      );
       console.log(c.line("─".repeat(separatorWidth)));
       console.log(c.line(`Summary ${c.dim(`(${workdays} days)`)}`));
 
@@ -257,14 +261,20 @@ function displayResults(
       const targetLine = `    Target:  ${c.highlight(formatHours(targetHoursPerDay))}/day = ${c.highlight(formatHours(targetTotal))} target`;
       const bookedLine = `    Booked:  ${c.highlight(formatHours(totalBooked))} = ${colorizePercentage(bookedPct)} ${c.dim(`(${bookedSign}${formatHours(bookedDiscrepancy)})`)}`;
       const clockedLine = `    Clocked: ${c.highlight(formatHours(totalClocked))} = ${colorizePercentage(clockedPct)} ${c.dim(`(${clockedSign}${formatHours(clockedDiscrepancy)})`)}`;
-      const separatorWidth = Math.max(summary.length, targetLine.length, bookedLine.length, clockedLine.length);
+      const separatorWidth = Math.max(
+        summary.length,
+        stripAnsi(targetLine).length,
+        stripAnsi(bookedLine).length,
+        stripAnsi(clockedLine).length,
+        stripAnsi(efficiencyLine).length,
+      );
       console.log(c.line("─".repeat(separatorWidth)));
       console.log(c.line(`Summary ${c.dim(`(${workdays} days)`)}`));
       console.log(c.line(targetLine));
       console.log(c.line(bookedLine));
       console.log(c.line(clockedLine));
     }
-    console.log(c.line(`    Efficiency: ${colorizePercentage(efficiency)} ${c.dim("(booked/clocked ratio)")}`));
+    console.log(c.line(efficiencyLine));
     console.log("");
   }
 }
