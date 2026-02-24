@@ -1,6 +1,6 @@
 {
   "name": "whstats",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "WH Stats - Compare booked hours (Redmine) vs clocked hours (timelogger)",
   "keywords": [
     "cli",
