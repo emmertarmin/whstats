@@ -50,9 +50,10 @@ ${helpLine("whstats --year-to-date ", "Show time statistics from Jan 1 to today 
 ${helpLine("whstats --brief        ", "Show concise output (daily totals only)")}
 ${helpLine("whstats --no-summary   ", "Show without aggregate summary (-n)")}
 ${helpLine("whstats --json         ", "Output results as JSON (-j)")}
-${helpLine("whstats --setup        ", "Configure credentials (interactive)")}
-${helpLine("whstats --config       ", "Show config file location")}
-${helpLine("whstats --reset        ", "Delete saved configuration")}
+${helpLine("whstats --config       ", "Configure credentials (interactive, alias: --setup)")}
+${helpLine("whstats --setup        ", "Configure credentials (interactive, alias: --config)")}
+${helpLine("whstats --show-config  ", "Show config file location and current settings")}
+${helpLine("whstats --reset        ", "Delete saved configuration (-r)")}
 ${helpLine("whstats --help         ", "Show this help message")}
 ${helpLine("whstats --version      ", "Show version")}
 
@@ -65,6 +66,10 @@ ${helpLine("whstats --version      ", "Show version")}
 
 function showVersion(): void {
   console.log(c.line(`whstats v${VERSION}`));
+}
+
+function maskSecret(_value: string): string {
+  return "**********";
 }
 
 function showConfig(): void {
@@ -82,18 +87,22 @@ function showConfig(): void {
       console.log(c.line("  Current settings:"));
       console.log(c.line(`    Redmine URL:       ${c.highlight(config.redmineUrl)}`));
       console.log(
-        c.line(`    Redmine API:       ${c.highlight(config.redmineApiKey.slice(0, 8))}...`),
+        c.line(`    Redmine API Key:   ${c.highlight(maskSecret(config.redmineApiKey))}`),
       );
       console.log(c.line(`    MSSQL Server:      ${c.highlight(config.mssqlServer)}`));
       console.log(c.line(`    MSSQL Database:    ${c.highlight(config.mssqlDatabase)}`));
       console.log(c.line(`    MSSQL User:        ${c.highlight(config.mssqlUser)}`));
-      console.log(c.line(`    User ID:           ${c.highlight(config.slackUserId)}`));
+      console.log(
+        c.line(`    MSSQL Password:    ${c.highlight(maskSecret(config.mssqlPassword))}`),
+      );
+      console.log(c.line(`    Slack User ID:     ${c.highlight(maskSecret(config.slackUserId))}`));
       console.log(
         c.line(`    Target hours/day:  ${c.highlight(`${config.targetHoursPerDay ?? 8}h`)}`),
       );
       const ignored = config.ignoredRedmineTicketIds ?? [];
       const ignoredLabel = ignored.length > 0 ? ignored.join(", ") : "(none)";
-      console.log(c.line(`    Ignored tickets:   ${c.highlight(ignoredLabel)}\n`));
+      console.log(c.line(`    Ignored tickets:   ${c.highlight(ignoredLabel)}`));
+      console.log("");
     }
   }
 }
@@ -337,8 +346,9 @@ async function main(): Promise<void> {
       options: {
         help: { type: "boolean", short: "h" },
         version: { type: "boolean", short: "v" },
-        setup: { type: "boolean", short: "s" },
-        config: { type: "boolean", short: "c" },
+        setup: { type: "boolean" },
+        config: { type: "boolean" },
+        "show-config": { type: "boolean" },
         reset: { type: "boolean", short: "r" },
         week: { type: "boolean", short: "w" },
         month: { type: "boolean", short: "m" },
@@ -371,6 +381,7 @@ async function main(): Promise<void> {
   const commandFlag =
     values.help ? "help"
     : values.version ? "version"
+    : values["show-config"] ? "show-config"
     : values.setup ? "setup"
     : values.config ? "config"
     : values.reset ? "reset"
@@ -395,12 +406,11 @@ async function main(): Promise<void> {
       break;
 
     case "setup":
-    case "s":
+    case "config":
       await handleSetup();
       break;
 
-    case "config":
-    case "c":
+    case "show-config":
       showConfig();
       break;
 

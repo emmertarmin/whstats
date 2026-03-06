@@ -61,10 +61,10 @@ whstats
 whstats --year-to-date
 
 # First time setup (interactive)
-whstats --setup
+whstats --config    # or --setup
 
 # Show config file location and current settings
-whstats --config
+whstats --show-config
 
 # Reset configuration
 whstats --reset
@@ -75,9 +75,9 @@ whstats --help
 
 ## Configuration
 
-Run `whstats --setup` to interactively enter your Redmine API key and other settings. Values marked in square brackets `[]` show preconfigured defaults, or past configuration, and can be accepted by pressing Enter.
+Run `whstats --config` (or `whstats --setup`) to interactively enter your Redmine API key and other settings. Values marked in square brackets `[]` show preconfigured defaults, or past configuration, and can be accepted by pressing Enter.
 
-To change your configuration later, simply run `whstats --setup` again to edit and overwrite existing values.
+To change your configuration later, simply run `whstats --config` again to edit and overwrite existing values.
 
 Configuration is stored in `~/.config/whstats/config.json` automatically.
 
