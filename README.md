@@ -1,31 +1,67 @@
-# WH Stats
+## About the project
 
-Compare booked hours (Redmine) vs clocked hours (timelogger) for the last 7 days.
+At Wirth & Horn we use Redmine for project management and time tracking. Since 2024 we have a custom internal Slackbot that lets us track our active work hours and greet each other.
 
-## Installation
+This CLI tool, `whstats` ("Wirth & Horn Statistics"), reads both sources, and provides a custom unified view of booked vs clocked hours, as well as longer term statistics. It is custom built for my own needs and those of my colleagues, and is not intended for public use.
+
+<br />
+<div align="center">
+	<h3 align="center">whstats</h3>
+
+  <p align="center">
+    A custom CLI tool for tracking and analyzing work hours at <a href="https://www.wirth-horn.de/">Wirth & Horn</a>.
+    <br />
+    <a href="https://github.com/emmertarmin/whstats#run-directly-recommended">Get started!</a>
+    <br />
+    <br />
+    <a href="https://github.com/emmertarmin/whstats#run-directly-recommended">Run directly</a>
+    &middot;
+    <a href="https://github.com/emmertarmin/whstats#configuration">Configure</a>
+    &middot;
+    <a href="https://github.com/emmertarmin/whstats#development">Contribute</a>
+  </p>
+</div>
+
+## Run directly (recommended)
+
+`whstats` can be run directly with `bun x whstats` or `npx whstats`, which ensures you're always running the latest version.
+
+The first time you will be prompted to set up your credentials interactively. See: [Configuration](#configuration).
+
+## Installation (optional)
+
+You can install it globally, allowing you to run `whstats` directly, but this requires manual updates.
+
+bun:
 
 ```bash
-# Using bun (recommended)
-bun x whstats
-
-# Using npx
-npx whstats
-
-# Or install globally
+# install
 bun install -g whstats
+# update
+bun update -g whstats
+```
+
+npm:
+
+```bash
+# install
+npm install -g whstats
+# update
+npm update -g whstats
+
 ```
 
 ## Usage
 
 ```bash
-# First-time setup (interactive)
-whstats --setup
-
 # Show time statistics
 whstats
 
 # Show year-to-date statistics
 whstats --year-to-date
+
+# First time setup (interactive)
+whstats --setup
 
 # Show config file location and current settings
 whstats --config
@@ -39,18 +75,27 @@ whstats --help
 
 ## Configuration
 
-On first run, use `whstats --setup` to configure your credentials interactively.
+Run `whstats --setup` to interactively enter your Redmine API key and other settings. Values marked in square brackets `[]` show preconfigured defaults, or past configuration, and can be accepted by pressing Enter.
 
-Configuration is stored in `~/.config/whstats/config.json`.
+To change your configuration later, simply run `whstats --setup` again to edit and overwrite existing values.
 
-You can optionally ignore one or more Redmine ticket IDs from booked-hour comparison.
-This is useful for non-working tickets (for example, sick days):
+Configuration is stored in `~/.config/whstats/config.json` automatically.
 
 ```json
 {
+  "redmineUrl": "https://redmine.wirth-horn.de",
+  "redmineApiKey": "<your_redmine_api_key>",
+  "mssqlServer": "10.10.10.15",
+  "mssqlDatabase": "wh_timelogger",
+  "mssqlUser": "<username>",
+  "mssqlPassword": "<password>",
+  "slackUserId": "<slack_user_id>",
+  "targetHoursPerDay": 8,
   "ignoredRedmineTicketIds": [39193]
 }
 ```
+
+`ignoredRedmineTicketIds` lets you exclude one or more Redmine ticket IDs from "booked-hour" calculations. This is useful for "non-productive" tickets (for example, sick days), that don't pair with Slackbot presence data. In the interactive setup, use comma-separated numbers.
 
 During `whstats --setup`, existing ignored IDs are prepopulated so you can edit and overwrite the full list.
 
@@ -59,16 +104,26 @@ During `whstats --setup`, existing ignored IDs are prepopulated so you can edit 
 ```
 Fetching time entries for John Doe...
 
-2026-02-03 Monday: 8h booked / 8.25h clocked
-  - #1234 4h Implemented feature X
-  - #1235 4h Code review and testing
+[...]
 
-2026-02-04 Tuesday: 7h booked / 7.5h clocked
-  - #1236 3h Bug fixes
-  - #1237 4h Documentation updates
+2026-02-03 Monday: 8h booked / 8.25h clocked
+  - #11111 4h Implemented feature X
+  - #22222 4h Code review and testing
+
+2026-02-04 Tuesday: 7h booked / 7.41h clocked
+  - #33333 3h Bug fixes
+  - #44444 4h Documentation updates
+────────────────────────────────────────────────────────────
+Summary (past 6 days)
+    Target:        40h + 7.41h
+    Booked:        40h +    7h =  99% (-0.41h)
+    Clocked:    43.59h + 7.41h = 115% (+3.59h)
+    Efficiency:                   92% (booked/clocked ratio)
 ```
 
 ## Development
+
+### Running Locally
 
 ```bash
 # Install dependencies
@@ -81,93 +136,14 @@ bun run index.ts
 bun run index.ts --help
 ```
 
-## Testing Strategy
+### Testing
 
-Before committing or publishing, verify the following:
-
-### 1. TypeScript Compilation
-
-```bash
-bun run build        # Should compile without errors
-
-bun run tsc          # Typechecking
-```
-
-### 2. CLI Commands (without config)
-
-```bash
-# Help and version (should work without config)
-bun run index.ts --help
-bun run index.ts --version
-bun run index.ts -h
-bun run index.ts -v
-
-# Config management (safe to test)
-bun run index.ts --config      # Should show "not configured"
-bun run index.ts --reset       # Should show "No configuration file found"
-```
-
-### 3. CLI Commands (with config)
-
-```bash
-# First, run setup to create config (requires valid credentials)
-bun run index.ts --setup
-
-# Then test the main stats commands
-bun run index.ts               # Default: last 7 days
-bun run index.ts --week        # Explicit week view
-bun run index.ts -w            # Short flag
-bun run index.ts --month       # Last 30 days
-bun run index.ts -m            # Short flag
-bun run index.ts --year-to-date # Jan 1 through today
-bun run index.ts -ytd           # Short flag
-
-# Test output modifiers
-bun run index.ts --brief       # Concise output
-bun run index.ts -b            # Short flag
-bun run index.ts --no-summary     # No summary section
-
-# Test flag combinations
-bun run index.ts --week --brief
-bun run index.ts -w -b
-bun run index.ts --month --brief
-bun run index.ts -m --no-summary
-bun run index.ts --month --brief --no-summary
-```
-
-### 4. Error Handling
-
-```bash
-# Unknown flags should error gracefully
-bun run index.ts --unknown     # Should show "Unknown flag"
-bun run index.ts --foo         # Should exit with code 1
-```
-
-### 5. Built Distribution Test
-
-```bash
-npm run build                  # Compile TypeScript
-node dist/index.js --help      # Test built version
-node dist/index.js --version   # Verify version matches package.json
-```
-
-### Testing Checklist
-
-- [ ] TypeScript compiles without errors
-- [ ] `--help` / `-h` shows usage information
-- [ ] `--version` / `-v` shows correct version
-- [ ] `--config` works (shows location and status)
-- [ ] `--setup` works interactively (requires valid credentials)
-- [ ] `--reset` removes configuration
-- [ ] Default command (no args) shows last 7 days
-- [ ] `--week` / `-w` shows 7 days
-- [ ] `--month` / `-m` shows 30 days
-- [ ] `--year-to-date` / `-ytd` shows Jan 1 through today
-- [ ] `--brief` / `-b` shows concise output (no per-entry details)
-- [ ] `--no-summary` / `-n` hides the summary section
-- [ ] Flag combinations work correctly (e.g., `--month --brief`)
+- [ ] Typecheck with `bun run tsc`
+- [ ] Run `bun run index.ts` and verify output is correct
+- [ ] Test `--help` and `--version` flags
+- [ ] Test flag combinations, e.g., `bun run index.ts --month --brief`
 - [ ] Unknown flags produce helpful error messages
-- [ ] Built distribution (`dist/`) runs correctly with Node.js
+- [ ] Built distribution (`bun run build && node dist/index.js --version`) runs correctly
 
 ## Publishing to npm
 
@@ -175,10 +151,11 @@ Follow this checklist when publishing a new version:
 
 ### Pre-publish Checklist
 
+- [ ] Ensure tests pass, see [Testing](#testing)
 - [ ] Ensure all changes are committed and pushed to git
-- [ ] Run tests manually: `bun run index.ts` (or `npm run build && node dist/index.js`)
 - [ ] Review the `files` array in `package.json` to ensure only necessary files are published
 - [ ] Check that `dist/` directory is not committed to git (should be in `.gitignore`)
+- [ ] Update `CHANGELOG.md` with new changes
 
 ### Version Bump & Publish
 
@@ -206,13 +183,6 @@ Follow this checklist when publishing a new version:
 - [ ] Check the package on npm: `npm view whstats`
 - [ ] Verify it works via npx: `npx whstats --help`
 - [ ] Push git tags: `git push --follow-tags`
-
-### Important Notes
-
-- **No manual build needed** - `prepublishOnly` handles it
-- **Log in to npm** first if needed: `npm login`
-- **Dry run** to test without publishing: `npm publish --dry-run`
-- **Public access** is default; for scoped packages use `npm publish --access public`
 
 ## License
 
