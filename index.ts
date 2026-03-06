@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { parseArgs } from "node:util";
 import {
   getConfigOrExit,
   promptForConfig,
@@ -324,93 +325,108 @@ async function runStatsForRange(
   }
 }
 
-const COMMAND_FLAGS = new Set([
-  "--help",
-  "-h",
-  "--version",
-  "-v",
-  "--setup",
-  "-s",
-  "--config",
-  "-c",
-  "--reset",
-  "-r",
-  "--week",
-  "-w",
-  "--month",
-  "-m",
-  "--year-to-date",
-  "-ytd",
-]);
-
-const MODIFIER_FLAGS = new Set(["--brief", "-b", "--no-summary", "-n", "--json", "-j"]);
-
 async function main(): Promise<void> {
-  // Filter out script name (e.g., "index.ts") when running with bun
-  const args = process.argv.slice(2).filter((arg) => !arg.endsWith(".ts") && !arg.endsWith(".js"));
-  const brief = args.includes("--brief") || args.includes("-b");
-  const showAggregates = !args.includes("--no-summary") && !args.includes("-n");
-  const json = args.includes("--json") || args.includes("-j");
+  // Handle special case: -ytd is equivalent to --year-to-date
+  const rawArgs = Bun.argv.slice(2);
+  const args = rawArgs.map((arg) => (arg === "-ytd" ? "-y" : arg));
 
-  // Check for unknown flags
-  const unknownFlag = args.find(
-    (arg) => arg.startsWith("-") && !COMMAND_FLAGS.has(arg) && !MODIFIER_FLAGS.has(arg),
-  );
-  if (unknownFlag) {
-    console.error(c.line(`\n  ${c.warning(`Unknown flag: ${unknownFlag}`)}`));
-    console.error(c.line(`  ${c.dim("Run 'whstats --help' for usage.")}\n`));
-    process.exit(1);
+  let parsed;
+  try {
+    parsed = parseArgs({
+      args,
+      options: {
+        help: { type: "boolean", short: "h" },
+        version: { type: "boolean", short: "v" },
+        setup: { type: "boolean", short: "s" },
+        config: { type: "boolean", short: "c" },
+        reset: { type: "boolean", short: "r" },
+        week: { type: "boolean", short: "w" },
+        month: { type: "boolean", short: "m" },
+        "year-to-date": { type: "boolean", short: "y" },
+        brief: { type: "boolean", short: "b" },
+        "no-summary": { type: "boolean", short: "n" },
+        json: { type: "boolean", short: "j" },
+      },
+      strict: true,
+      allowPositionals: true,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Unknown option")) {
+      const unknownFlag = error.message.match(/'([^']+)'/)?.[1] ?? "unknown";
+      console.error(c.line(`\n  ${c.warning(`Unknown flag: ${unknownFlag}`)}`));
+      console.error(c.line(`  ${c.dim("Run 'whstats --help' for usage.")}\n`));
+      process.exit(1);
+    }
+    throw error;
   }
 
-  // Command is either a known command flag or a non-flag argument
-  const flagCommand = args.find((arg) => COMMAND_FLAGS.has(arg));
-  const nonFlagArg = args.find((arg) => !arg.startsWith("-"));
-  const command = flagCommand ?? nonFlagArg;
+  const { values, positionals } = parsed;
+  const brief = values.brief ?? false;
+  const showAggregates = !(values["no-summary"] ?? false);
+  const json = values.json ?? false;
+
+  // Determine which command to run
+  // Priority: explicit command flags > non-flag positional > default (7 days)
+  const commandFlag =
+    values.help ? "help"
+    : values.version ? "version"
+    : values.setup ? "setup"
+    : values.config ? "config"
+    : values.reset ? "reset"
+    : values.week ? "week"
+    : values.month ? "month"
+    : values["year-to-date"] ? "year-to-date"
+    : null;
+
+  const nonFlagArg = positionals[0];
+  const command = commandFlag ?? nonFlagArg;
 
   switch (command) {
-    case "--help":
-    case "-h":
+    case "help":
+    case "h":
       showHelp();
       break;
 
-    case "--version":
-    case "-v":
+    case "version":
+    case "v":
       showVersion();
       break;
 
-    case "--setup":
-    case "-s":
+    case "setup":
+    case "s":
       await handleSetup();
       break;
 
-    case "--config":
-    case "-c":
+    case "config":
+    case "c":
       showConfig();
       break;
 
-    case "--reset":
-    case "-r":
+    case "reset":
+    case "r":
       handleReset();
       break;
 
-    case "-w":
-    case "--week":
+    case "week":
+    case "w":
       await runStats(7, brief, showAggregates, json);
       break;
 
-    case "-m":
-    case "--month":
+    case "month":
+    case "m":
       await runStats(30, brief, showAggregates, json);
       break;
 
-    case "-ytd":
-    case "--year-to-date": {
+    case "year-to-date":
+    case "y":
+    case "ytd": {
       const { from, to } = getYearToDateRange();
       await runStatsForRange(from, to, brief, showAggregates, json);
       break;
     }
 
     case undefined:
+    case null:
       await runStats(7, brief, showAggregates, json);
       break;
 
