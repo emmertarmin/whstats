@@ -4,8 +4,10 @@ import { CliError } from "../cli/errors.js";
 import { loadConfig } from "../config/index.js";
 import { createPresenceGateway } from "../presence/client.js";
 import { createRedmineGateway } from "../redmine/gateway.js";
+import type { RedmineGateway, TimeEntry } from "../redmine/gateway.js";
 import { buildReport } from "../domain/report.js";
 import { renderTerminalMarkdown } from "../output/markdown-terminal.js";
+import { loadOmarchyTerminalTheme } from "../output/omarchy-theme.js";
 import { renderReportJson } from "../output/report-json.js";
 import { renderReportMarkdown } from "../output/report-markdown.js";
 
@@ -90,6 +92,21 @@ export function resolveRange(values: ParsedValues, positionals: string[]): Resol
   return presetRange("recent");
 }
 
+async function loadIssueSubjects(
+  redmine: RedmineGateway,
+  timeEntries: readonly TimeEntry[],
+): Promise<ReadonlyMap<number, string>> {
+  const issueIds = [
+    ...new Set(timeEntries.flatMap((entry) => (entry.issue === undefined ? [] : [entry.issue.id]))),
+  ];
+  const results = await Promise.allSettled(issueIds.map((id) => redmine.getIssue(id)));
+  const subjects = new Map<number, string>();
+  for (const result of results) {
+    if (result.status === "fulfilled") subjects.set(result.value.id, result.value.subject);
+  }
+  return subjects;
+}
+
 async function runReport(range: ResolvedRange, values: ParsedValues): Promise<void> {
   const config = loadConfig();
   if (!config)
@@ -120,8 +137,14 @@ async function runReport(range: ResolvedRange, values: ParsedValues): Promise<vo
     return;
   }
 
-  const markdown = renderReportMarkdown(report, values.verbose === true);
-  process.stdout.write(output === "terminal" ? renderTerminalMarkdown(markdown) : markdown);
+  const verbose = values.verbose === true;
+  const issueSubjects = verbose ? await loadIssueSubjects(redmine, timeEntries) : undefined;
+  const markdown = renderReportMarkdown(report, verbose, issueSubjects);
+  process.stdout.write(
+    output === "terminal"
+      ? renderTerminalMarkdown(markdown, { theme: loadOmarchyTerminalTheme() })
+      : markdown,
+  );
 }
 
 export const reportCommand: CommandDefinition = {

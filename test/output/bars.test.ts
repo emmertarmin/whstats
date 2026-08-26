@@ -7,10 +7,10 @@ describe("eight-cell hour bars", () => {
     expect(Bun.stringWidth(bar.cells)).toBe(BAR_CELLS);
   });
 
-  test("uses partial cells and reports overflow separately", () => {
-    expect(hourBar(0.5, 8)).toEqual({ cells: "▌░░░░░░░", overTarget: false });
-    expect(hourBar(8, 8)).toEqual({ cells: "████████", overTarget: false });
-    expect(hourBar(9, 8)).toEqual({ cells: "████████", overTarget: true });
+  test("uses partial cells and caps values at the target", () => {
+    expect(hourBar(0.5, 8)).toEqual({ cells: "▌       " });
+    expect(hourBar(8, 8)).toEqual({ cells: "████████" });
+    expect(hourBar(9, 8)).toEqual({ cells: "████████" });
   });
 
   test("rejects invalid values", () => {
