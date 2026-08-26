@@ -29,10 +29,8 @@ Bun publish uses the same npm registry and credentials.
 
 ```bash
 bun publish --dry-run
-bun publish --access public
+bun publish
 ```
-
-Use `--access public` on the first scoped publish.
 
 6. Commit, tag, and push:
 
