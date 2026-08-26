@@ -83,6 +83,8 @@ describe("report output", () => {
     const markdown = renderReportMarkdown(report);
     expect(markdown).toBe(expected);
     expect(Bun.stripANSI(markdown)).toBe(markdown);
+    const renderedBars = [...markdown.matchAll(/`([^`]+)`/g)].map((match) => match[1]!);
+    expect(renderedBars.every((bar) => Bun.stringWidth(bar) === 9)).toBe(true);
   });
 
   test("verbose Markdown adds details without changing the summary", () => {

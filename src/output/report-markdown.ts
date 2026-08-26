@@ -17,7 +17,8 @@ function rangeLabel(report: Report): string {
 
 function metric(value: number, target: number): string {
   const bar = hourBar(value, target);
-  return `${hours(value)} \`${bar.cells}\`${bar.overTarget ? "+" : ""}`;
+  const overflowMarker = bar.overTarget ? "+" : "\u00a0";
+  return `${hours(value)} \`${bar.cells}${overflowMarker}\``;
 }
 
 function status(day: ReportDay): string {
