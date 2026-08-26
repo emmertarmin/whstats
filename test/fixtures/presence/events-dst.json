@@ -1,0 +1,26 @@
+{
+  "cases": [
+    {
+      "name": "Europe/Berlin spring-forward",
+      "timeZone": "Europe/Berlin",
+      "range": { "from": "2026-03-28", "to": "2026-03-29" },
+      "serverNow": "2026-03-29T12:00:00",
+      "events": [
+        { "event_time": "2026-03-28T23:00:00", "clock": 1 },
+        { "event_time": "2026-03-29T04:00:00", "clock": 0 }
+      ],
+      "expectedHours": { "2026-03-28": 1, "2026-03-29": 3 }
+    },
+    {
+      "name": "Europe/Berlin autumn fall-back",
+      "timeZone": "Europe/Berlin",
+      "range": { "from": "2026-10-24", "to": "2026-10-25" },
+      "serverNow": "2026-10-25T12:00:00",
+      "events": [
+        { "event_time": "2026-10-24T23:00:00", "clock": 1 },
+        { "event_time": "2026-10-25T04:00:00", "clock": 0 }
+      ],
+      "expectedHours": { "2026-10-24": 1, "2026-10-25": 5 }
+    }
+  ]
+}

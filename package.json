@@ -22,14 +22,15 @@
     "whstats": "./dist/index.js"
   },
   "files": [
-    "dist/**/*.js",
-    "dist/**/*.d.ts"
+    "dist/**/*.js"
   ],
   "type": "module",
   "scripts": {
-    "prebuild": "bun -e \"import p from './package.json' with {type:'json'}; await Bun.write('lib/version.ts', 'export const VERSION = \\\"' + p.version + '\\\";\\n')\"",
-    "build": "tsc",
+    "build": "bun build ./src/index.ts --target bun --outfile ./dist/index.js",
+    "cli": "bun ./src/index.ts",
     "tsc": "tsc --noEmit",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
     "fmt:check": "oxfmt --check .",
     "fmt": "oxfmt --write .",
     "prepublishOnly": "npm run build"
@@ -44,6 +45,6 @@
     "typescript": "^5"
   },
   "engines": {
-    "node": ">=18"
+    "bun": ">=1.4.0"
   }
 }

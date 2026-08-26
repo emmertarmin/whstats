@@ -3,6 +3,7 @@
 ## v2.0.0
 
 ### Breaking Changes
+
 - **Removed `--ytd` alias**: Year-to-date statistics now only accessible via `--year-to-date` or `-Y` (uppercase)
 - **Changed `-y` meaning**: Previously `-y` was alias for `--year-to-date`, now `-y` means `--year` (past 365 days), and `-Y` (uppercase) means `--year-to-date`
 - **Removed `--no-summary` / `-n` flag**: Summary is now always shown; use `--brief` for concise output
@@ -12,6 +13,7 @@
 - **Removed `-r` short option**: `--reset` no longer has a short option; must be typed out fully as a safety measure
 
 ### Added or Changed
+
 - Added `--year` flag with `-y` short option to show statistics for the past 365 days
 - Added `--brief` / `-b` modifier for concise output (daily totals only, no entries)
 - Added `--json` / `-j` modifier for JSON output format

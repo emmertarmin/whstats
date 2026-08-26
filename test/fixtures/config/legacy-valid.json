@@ -1,0 +1,11 @@
+{
+  "redmineUrl": "https://redmine.example.test",
+  "redmineApiKey": "redmine-api-key-1",
+  "mssqlServer": "sql.example.test",
+  "mssqlDatabase": "wh_timelogger_test",
+  "mssqlUser": "sql_user",
+  "mssqlPassword": "sql_password",
+  "slackUserId": "12345",
+  "targetHoursPerDay": 8,
+  "ignoredRedmineTicketIds": [90001]
+}

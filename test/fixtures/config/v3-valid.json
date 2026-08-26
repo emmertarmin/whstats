@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "redmine": {
+    "url": "https://redmine.example.test///",
+    "apiKey": "api-key-secret-sentinel"
+  },
+  "presence": {
+    "server": "sql.example.test",
+    "database": "work_hours_test",
+    "user": "test_user",
+    "password": "database-password-secret-sentinel",
+    "userId": 70001,
+    "timeZone": "Europe/Berlin"
+  },
+  "report": {
+    "targetHoursPerDay": 7.5,
+    "excusedIssueIds": [90001, 90002]
+  }
+}
