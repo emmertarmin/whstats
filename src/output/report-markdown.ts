@@ -18,7 +18,7 @@ function rangeLabel(report: Report): string {
 function metric(value: number, target: number): string {
   const bar = hourBar(value, target);
   const overflowMarker = bar.overTarget ? "+" : "\u00a0";
-  return `${hours(value)} \`${bar.cells}${overflowMarker}\``;
+  return `${Number(value.toFixed(2))} \`${bar.cells}${overflowMarker}\``;
 }
 
 function status(day: ReportDay): string {
@@ -32,8 +32,8 @@ function status(day: ReportDay): string {
 function renderDayRow(day: ReportDay, target: number): string {
   const booked = metric(day.bookedHours, target);
   const present = metric(day.presenceHours, target);
-  const gap = day.bookingGapHours > 0 ? hours(day.bookingGapHours) : "—";
-  const excused = day.excusedHours > 0 ? ` · ${hours(day.excusedHours)} excused` : "";
+  const gap = day.bookingGapHours > 0 ? Number(day.bookingGapHours.toFixed(2)) : "—";
+  const excused = day.excusedHours > 0 ? ` · ${Number(day.excusedHours.toFixed(2))} excused` : "";
   return `| ${day.date}${status(day)} | ${booked}${excused} | ${present} | ${gap} |`;
 }
 
@@ -62,7 +62,7 @@ export function renderReportMarkdown(report: Report, verbose = false): string {
   const lines = [
     `# Work hours · ${rangeLabel(report)}`,
     "",
-    "| Date | Booked | Present | Booking gap |",
+    "| Date | Booked (h) | Present (h) | Booking gap (h) |",
     "| --- | ---: | ---: | ---: |",
     ...report.days.map((day) => renderDayRow(day, report.targetHoursPerDay)),
     "",
