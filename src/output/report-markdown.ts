@@ -21,10 +21,9 @@ function metric(value: number, target: number): string {
   return `${Number(value.toFixed(2))} \`${bar.cells}${overflowMarker}\``;
 }
 
-function weekdayInitial(date: string): string {
-  return new Intl.DateTimeFormat("en-US", { weekday: "narrow", timeZone: "UTC" }).format(
-    new Date(`${date}T00:00:00Z`),
-  );
+function weekdayAbbreviation(date: string): string {
+  const weekdays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"] as const;
+  return weekdays[new Date(`${date}T00:00:00Z`).getUTCDay()]!;
 }
 
 function status(day: ReportDay): string {
@@ -39,7 +38,7 @@ function renderDayRow(day: ReportDay, target: number): string {
   const booked = metric(day.bookedHours, target);
   const present = metric(day.presenceHours, target);
   const gap = day.bookingGapHours > 0 ? Number(day.bookingGapHours.toFixed(2)) : "—";
-  return `| ${day.date} ${weekdayInitial(day.date)}${status(day)} | ${booked} | ${present} | ${gap} |`;
+  return `| ${day.date} ${weekdayAbbreviation(day.date)}${status(day)} | ${booked} | ${present} | ${gap} |`;
 }
 
 function renderEntry(entry: ReportTimeEntry): string {

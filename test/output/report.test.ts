@@ -87,6 +87,14 @@ describe("report output", () => {
     expect(renderedBars.every((bar) => Bun.stringWidth(bar) === 9)).toBe(true);
   });
 
+  test("uses unambiguous two-letter weekday abbreviations", () => {
+    const thursdayReport: Report = {
+      ...report,
+      days: [{ ...report.days[0]!, date: "2026-08-27" }],
+    };
+    expect(renderReportMarkdown(thursdayReport)).toContain("| 2026-08-27 Th |");
+  });
+
   test("verbose Markdown adds details without changing the summary", () => {
     const concise = renderReportMarkdown(report);
     const verbose = renderReportMarkdown(report, true);
