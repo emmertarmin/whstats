@@ -33,8 +33,7 @@ function renderDayRow(day: ReportDay, target: number): string {
   const booked = metric(day.bookedHours, target);
   const present = metric(day.presenceHours, target);
   const gap = day.bookingGapHours > 0 ? Number(day.bookingGapHours.toFixed(2)) : "—";
-  const excused = day.excusedHours > 0 ? ` · ${Number(day.excusedHours.toFixed(2))} excused` : "";
-  return `| ${day.date}${status(day)} | ${booked}${excused} | ${present} | ${gap} |`;
+  return `| ${day.date}${status(day)} | ${booked} | ${present} | ${gap} |`;
 }
 
 function renderEntry(entry: ReportTimeEntry): string {
