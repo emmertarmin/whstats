@@ -1,9 +1,9 @@
-# Work hours · Tue 25 Aug–Wed 26 Aug 2026
+# Work hours · 2026-08-25–2026-08-26
 
-| Date | Booked | Present | Booking gap | Issues |
-| --- | ---: | ---: | ---: | --- |
-| Tue 25 Aug | `████▌░░░` 4.5h | `████████`+ 10h | 5.5h | #43135 4.5h |
-| Wed 26 Aug · running, mixed | `█░░░░░░░` 1h · 1h excused | `██░░░░░░` 2h | 1h | — |
+| Date | Booked | Present | Booking gap |
+| --- | ---: | ---: | ---: |
+| 2026-08-25 | 4.5h `████▌░░░` | 10h `████████`+ | 5.5h |
+| 2026-08-26 RM | 1h `█░░░░░░░` · 1h excused | 2h `██░░░░░░` | 1h |
 
 ## Summary
 
@@ -11,6 +11,6 @@
 - **Booked:** 4.5h / 8h target (−3.5h)
 - **Present:** 10h / 8h target (+2h)
 - **Booking coverage:** 45% (5.5h present but not booked)
-- **Largest booking gap:** Tue 25 Aug, 5.5h
+- **Largest booking gap:** 2026-08-25, 5.5h
 
 > An in-progress day is not included in the completed-day summary.
