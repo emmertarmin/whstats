@@ -1,5 +1,35 @@
 # Changelog
 
+## v3.0.2
+
+### Fixed
+
+- Added automatic migration of pre-v3 flat configuration files to the current versioned schema.
+- Added defaults for optional values that are absent from legacy configuration files.
+
+## v3.0.1
+
+### Added or Changed
+
+- Improved the report layout, spacing, and visual hierarchy, including compact bars and quarter-hour booking gaps.
+- Grouped verbose Redmine entries by project and issue, and added issue subjects.
+- Added optional terminal colors from the active Omarchy theme.
+
+## v3.0.0
+
+### Breaking Changes
+
+- Reimplemented the CLI and report pipeline for Bun and now require Bun 1.4 or later.
+- Replaced the v2 command-line interface with grouped commands and strict option validation.
+- Replaced the flat configuration format with a versioned, nested schema.
+
+### Added or Changed
+
+- Added deterministic presence-session reconstruction with range, midnight, and daylight-saving-time handling.
+- Added Markdown, terminal Markdown, and JSON report output.
+- Added concise and verbose report views with daily booking and presence bars.
+- Added strict configuration validation and secure atomic configuration writes.
+
 ## v2.0.0
 
 ### Breaking Changes
