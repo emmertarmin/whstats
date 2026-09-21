@@ -44,6 +44,50 @@ function requireObject(
   return value;
 }
 
+function optionalPositiveNumber(
+  object: Record<string, unknown>,
+  key: string,
+  path: string,
+  defaultValue: number,
+): number {
+  return object[key] === undefined ? defaultValue : requirePositiveNumber(object, key, path);
+}
+
+function optionalPositiveIntegerArray(
+  object: Record<string, unknown>,
+  key: string,
+  defaultValue: number[],
+): number[] {
+  return object[key] === undefined ? defaultValue : validateExcusedIssueIds(object[key]);
+}
+
+function migrateLegacyConfig(input: Record<string, unknown>): Config {
+  const userId = Number(requireString(input, "slackUserId", "slackUserId"));
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new Error("Invalid config: slackUserId must be a positive integer string.");
+  }
+
+  return validateConfig({
+    schemaVersion: 1,
+    redmine: {
+      url: requireString(input, "redmineUrl", "redmineUrl"),
+      apiKey: requireString(input, "redmineApiKey", "redmineApiKey"),
+    },
+    presence: {
+      server: requireString(input, "mssqlServer", "mssqlServer"),
+      database: requireString(input, "mssqlDatabase", "mssqlDatabase"),
+      user: requireString(input, "mssqlUser", "mssqlUser"),
+      password: requireString(input, "mssqlPassword", "mssqlPassword"),
+      userId,
+      timeZone: "Europe/Berlin",
+    },
+    report: {
+      targetHoursPerDay: optionalPositiveNumber(input, "targetHoursPerDay", "targetHoursPerDay", 8),
+      excusedIssueIds: optionalPositiveIntegerArray(input, "ignoredRedmineTicketIds", []),
+    },
+  });
+}
+
 export function normalizeRedmineUrl(value: string): string {
   let url: URL;
   try {
@@ -93,6 +137,10 @@ function validateExcusedIssueIds(value: unknown): number[] {
 export function validateConfig(input: unknown): Config {
   if (!isRecord(input)) {
     throw new Error("Invalid config: root must be an object.");
+  }
+
+  if (input.schemaVersion === undefined) {
+    return migrateLegacyConfig(input);
   }
 
   if (input.schemaVersion !== 1) {

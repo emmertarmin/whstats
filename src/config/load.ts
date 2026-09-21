@@ -30,7 +30,16 @@ export function loadConfig(): Config | null {
   }
 
   try {
-    return validateConfig(parsed);
+    const config = validateConfig(parsed);
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      !Array.isArray(parsed) &&
+      !("schemaVersion" in parsed)
+    ) {
+      saveConfig(config);
+    }
+    return config;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new Error(`Invalid config file ${CONFIG_FILE}: ${reason}`);

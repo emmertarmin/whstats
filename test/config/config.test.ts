@@ -242,21 +242,58 @@ describe("v3 config loading and saving", () => {
     }
   });
 
-  test("rejects flat legacy config clearly", async () => {
+  test("migrates and saves a flat legacy config", async () => {
     const env = isolatedHome();
     try {
-      const legacy = await loadFixture<unknown>("config/legacy-valid.json");
+      const legacy = await loadFixture<Record<string, unknown>>("config/legacy-valid.json");
       writeConfig(env.configPath, JSON.stringify(legacy));
       const result = runConfigScript(
         env.home,
-        `const { loadConfig } = await import(${JSON.stringify(configModuleUrl)}); loadConfig();`,
+        `const { loadConfig } = await import(${JSON.stringify(configModuleUrl)}); console.log(JSON.stringify(loadConfig()));`,
       );
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr.toString()).toContain("Invalid config file");
-      expect(result.stderr.toString()).toContain("schemaVersion must be 1");
+      expect(result.exitCode).toBe(0);
+      const expected: Config = {
+        schemaVersion: 1,
+        redmine: {
+          url: "https://redmine.example.test",
+          apiKey: "redmine-api-key-1",
+        },
+        presence: {
+          server: "sql.example.test",
+          database: "wh_timelogger_test",
+          user: "sql_user",
+          password: "sql_password",
+          userId: 12345,
+          timeZone: "Europe/Berlin",
+        },
+        report: {
+          targetHoursPerDay: 8,
+          excusedIssueIds: [90001],
+        },
+      };
+      expect(JSON.parse(result.stdout.toString())).toEqual(expected);
+      expect(JSON.parse(readFileSync(env.configPath, "utf8"))).toEqual(expected);
+      expect(statSync(env.configPath).mode & 0o777).toBe(0o600);
     } finally {
       env.cleanup();
     }
+  });
+
+  test("uses defaults for absent optional legacy values", () => {
+    const legacy = {
+      redmineUrl: "https://redmine.example.test",
+      redmineApiKey: "key",
+      mssqlServer: "server",
+      mssqlDatabase: "database",
+      mssqlUser: "user",
+      mssqlPassword: "password",
+      slackUserId: "12345",
+    };
+
+    expect(validateConfig(legacy).report).toEqual({
+      targetHoursPerDay: 8,
+      excusedIssueIds: [],
+    });
   });
 
   test("reports malformed JSON without parser excerpts or secrets", () => {
