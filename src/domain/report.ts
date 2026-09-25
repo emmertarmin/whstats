@@ -164,6 +164,19 @@ function buildSummary(days: readonly ReportDay[]): ReportSummary {
   const bookedVsTargetHours = bookedHours - targetHours;
   const presenceVsTargetHours = presenceHours - targetHours;
 
+  const locationHours = { office: 0, home: 0, remote: 0, na: 0 };
+  for (const day of days) {
+    for (const session of day.presenceSessions) {
+      const hours = (Date.parse(session.endInstant) - Date.parse(session.startInstant)) / 3_600_000;
+      const location = session.location;
+      if (location === "office" || location === "home" || location === "remote") {
+        locationHours[location] += hours;
+      } else {
+        locationHours.na += hours;
+      }
+    }
+  }
+
   let largestBookingGap: { readonly date: string; readonly hours: number } | null = null;
   for (const day of completedDays) {
     if (day.bookingGapHours > (largestBookingGap?.hours ?? 0)) {
@@ -184,6 +197,9 @@ function buildSummary(days: readonly ReportDay[]): ReportSummary {
     bookedVsTargetHours,
     presenceVsTargetHours,
     largestBookingGap,
+    ...(locationHours.office + locationHours.home + locationHours.remote > 0
+      ? { locationHours }
+      : {}),
   };
 }
 

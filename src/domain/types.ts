@@ -51,6 +51,12 @@ export interface ReportSummary {
   readonly bookedVsTargetHours: number;
   readonly presenceVsTargetHours: number;
   readonly largestBookingGap: { readonly date: string; readonly hours: number } | null;
+  readonly locationHours?: {
+    readonly office: number;
+    readonly home: number;
+    readonly remote: number;
+    readonly na: number;
+  };
 }
 
 export interface Report {

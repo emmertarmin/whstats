@@ -13,6 +13,7 @@ export interface ClockedHoursResult {
 interface PresenceEventRow {
   readonly event_time: string;
   readonly clock: number;
+  readonly location: string | null;
 }
 
 interface ServerNowRow {
@@ -41,6 +42,7 @@ function normalizeRows(rows: readonly PresenceEventRow[]): RawPresenceEvent[] {
   return rows.map((row) => ({
     eventTime: row.event_time,
     clock: normalizeClock(row.clock),
+    ...(row.location != null ? { location: row.location } : {}),
   }));
 }
 
@@ -55,11 +57,12 @@ export async function listPresence(config: Config, range: DateRange): Promise<Pr
       .input("toDate", sql.Date, range.to);
 
     const result = await request.query(`
-      SELECT event_time, clock
+      SELECT event_time, clock, location
       FROM (
         SELECT TOP (1)
           CONVERT(varchar(27), [date], 126) AS event_time,
-          [clock]
+          [clock],
+          [location]
         FROM event_logs
         WHERE user_id = @userId
           AND [date] < CAST(@fromDate AS datetime)
@@ -70,7 +73,8 @@ export async function listPresence(config: Config, range: DateRange): Promise<Pr
 
       SELECT
         CONVERT(varchar(27), [date], 126) AS event_time,
-        [clock]
+        [clock],
+        [location]
       FROM event_logs
       WHERE user_id = @userId
         AND [date] >= CAST(@fromDate AS datetime)

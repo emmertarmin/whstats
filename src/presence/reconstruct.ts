@@ -12,6 +12,7 @@ interface ZonedInstant {
   readonly instantMs: number;
   readonly instantIso: string;
   readonly clock: 0 | 1;
+  readonly location?: string | null;
 }
 
 interface SessionInternal {
@@ -21,6 +22,7 @@ interface SessionInternal {
   readonly endMs: number;
   readonly runningAtNow: boolean;
   readonly inferredEnd: boolean;
+  readonly location?: string | null;
 }
 
 const MS_PER_HOUR = 1000 * 60 * 60;
@@ -179,6 +181,7 @@ function splitSession(
         endInstant: new Date(endMs).toISOString(),
         runningAtNow: session.runningAtNow && endMs === session.endMs,
         inferredEnd: session.inferredEnd && endMs === session.endMs,
+        ...(session.location != null ? { location: session.location } : {}),
       });
     }
     startMs = endMs;
@@ -265,6 +268,7 @@ export function reconstructPresence(
         endMs,
         runningAtNow: false,
         inferredEnd: false,
+        location: activeStart.location,
       });
     }
     activeStart = null;
@@ -282,6 +286,7 @@ export function reconstructPresence(
       endMs: closeLimitMs,
       runningAtNow: running,
       inferredEnd: !running,
+      location: activeStart.location,
     });
     if (!running) {
       anomalies.push(

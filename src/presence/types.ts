@@ -8,6 +8,7 @@ export type PresenceClockValue = 0 | 1;
 export interface RawPresenceEvent {
   readonly eventTime: string;
   readonly clock: PresenceClockValue;
+  readonly location?: string | null;
 }
 
 export type PresenceAnomalyKind =
@@ -30,6 +31,7 @@ export interface PresenceSession {
   readonly endInstant: string;
   readonly runningAtNow: boolean;
   readonly inferredEnd: boolean;
+  readonly location?: string | null;
 }
 
 export interface PresenceDay {

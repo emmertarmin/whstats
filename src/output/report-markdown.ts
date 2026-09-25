@@ -72,7 +72,7 @@ function sumEntryHours(entries: readonly ReportTimeEntry[]): number {
 }
 
 function escapeMarkdown(value: string): string {
-  return value.replaceAll("\\", "\\\\").replace(/([`*_\[\]<>])/g, "\\$1");
+  return value.replaceAll("\\", "\\\\").replace(/([`*_[\]<>])/g, "\\$1");
 }
 
 function renderVerboseMetric(
@@ -154,9 +154,21 @@ export function renderReportMarkdown(
     `- **Completed active days:** ${report.summary.completedActiveDays}`,
     `- **Booked:** ${hours(report.summary.bookedHours)} / ${hours(report.summary.targetHours)} target (${signedHours(report.summary.bookedVsTargetHours)})`,
     `- **Present:** ${hours(report.summary.presenceHours)} / ${hours(report.summary.targetHours)} target (${signedHours(report.summary.presenceVsTargetHours)})`,
-    `- **Booking coverage:** ${report.summary.bookingCoverageRatio === null ? "—" : `${Math.round(report.summary.bookingCoverageRatio * 100)}%`} (${hours(report.summary.bookingGapHours)} present but not booked)`,
-    `- **Largest booking gap:** ${report.summary.largestBookingGap === null ? "—" : `${report.summary.largestBookingGap.date}, ${hours(report.summary.largestBookingGap.hours)}`}`,
+    `- **Booked / target:** ${report.summary.targetHours === 0 ? "—" : `${Math.round((report.summary.bookedHours / report.summary.targetHours) * 100)}%`} · **Booked / present:** ${report.summary.bookingCoverageRatio === null ? "—" : `${Math.round(report.summary.bookingCoverageRatio * 100)}%`}`,
+    `- **Largest booking gap:** ${report.summary.largestBookingGap === null ? "—" : `${report.summary.largestBookingGap.date} ${weekdayAbbreviation(report.summary.largestBookingGap.date)}, ${hours(report.summary.largestBookingGap.hours)}`}`, 
   ];
+
+  const locationHours = report.summary.locationHours;
+  if (locationHours) {
+    const total =
+      locationHours.office + locationHours.home + locationHours.remote + locationHours.na;
+    const known = total - locationHours.na;
+    const percent = (value: number, denominator: number): number =>
+      Math.round((value / denominator) * 100);
+    lines.push(
+      `- **Location:** office ${percent(locationHours.office, total)}%, home ${percent(locationHours.home, total)}%, remote ${percent(locationHours.remote, total)}% · office / known: ${percent(locationHours.office, known)}%`,
+    );
+  }
 
   if (report.days.some((day) => day.inProgress)) {
     lines.push("", "> An in-progress day is not included in the completed-day summary.");
