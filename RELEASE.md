@@ -1,6 +1,6 @@
 # Release (Bun)
 
-Scoped package: `@emmertarmin/whstats`
+Package: `whstats`
 
 1. Check tests and types:
 

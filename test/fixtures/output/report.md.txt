@@ -10,7 +10,7 @@
 - **Completed active days:** 1
 - **Booked:** 4.5h / 8h target (−3.5h)
 - **Present:** 10h / 8h target (+2h)
-- **Booking coverage:** 45% (5.5h present but not booked)
-- **Largest booking gap:** 2026-08-25, 5.5h
+- **Booked / target:** 56% · **Booked / present:** 45%
+- **Largest booking gap:** 2026-08-25 Tu, 5.5h
 
 > An in-progress day is not included in the completed-day summary.
