@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.0.3
+
+### Added or Changed
+
+- Added presence-location percentages and the office-to-known-location ratio to report summaries.
+- Replaced booking coverage with booked-to-target and booked-to-present percentages.
+- Added the weekday to the largest booking gap date.
+
 ## v3.0.2
 
 ### Fixed
